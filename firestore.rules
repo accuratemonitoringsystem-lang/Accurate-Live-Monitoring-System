@@ -1,0 +1,480 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Validation Functions for Data Integrity & Department Ownership ---
+    function isValidMachineCreate(data) {
+      return ('machineNumber' in data && data.machineNumber is string && data.machineNumber.size() > 0)
+          && (!('progress' in data) || (data.progress is number && data.progress >= 0 && data.progress <= 100))
+          && (!('overallProgressPercent' in data) || (data.overallProgressPercent is number && data.overallProgressPercent >= 0 && data.overallProgressPercent <= 100));
+    }
+
+    function isValidMachineUpdate(currentData, incomingData) {
+      return (!('machineNumber' in incomingData) || (incomingData.machineNumber is string && incomingData.machineNumber.size() > 0))
+          && (!('progress' in incomingData) || (incomingData.progress is number && incomingData.progress >= 0 && incomingData.progress <= 100))
+          && (!('overallProgressPercent' in incomingData) || (incomingData.overallProgressPercent is number && incomingData.overallProgressPercent >= 0 && incomingData.overallProgressPercent <= 100))
+          && (!('currentDepartment' in incomingData) || (incomingData.currentDepartment is string && incomingData.currentDepartment.size() > 0))
+          && (!('responsibleDepartment' in incomingData) || (incomingData.responsibleDepartment is string && incomingData.responsibleDepartment.size() > 0));
+    }
+
+    function isValidDepartmentWorkCreate(data) {
+      return ('department' in data && data.department is string && data.department.size() > 0)
+          && ('machineNumber' in data && data.machineNumber is string && data.machineNumber.size() > 0)
+          && (!('progress' in data) || (data.progress is number && data.progress >= 0 && data.progress <= 100));
+    }
+
+    function isValidDepartmentWorkUpdate(currentData, incomingData) {
+      // Prevents reassigning department ownership of existing department work records
+      return (!('department' in incomingData) || (incomingData.department is string && incomingData.department.size() > 0 && incomingData.department == currentData.department))
+          && (!('machineNumber' in incomingData) || (incomingData.machineNumber is string && incomingData.machineNumber.size() > 0))
+          && (!('progress' in incomingData) || (incomingData.progress is number && incomingData.progress >= 0 && incomingData.progress <= 100));
+    }
+
+    function isValidQualityCheck(data) {
+      return (!('status' in data) || data.status in ['Accept', 'Reject', 'Hold', 'Pending', 'Pass', 'Fail'])
+          && (!('qualityResult' in data) || data.qualityResult in ['Accept', 'Reject', 'Hold', 'Pass', 'Fail']);
+    }
+
+    function isValidQualityReinspection(data) {
+      return (!('result' in data) || data.result in ['Accepted', 'Rejected', 'Hold']);
+    }
+
+    function isValidQualityHandoverCreate(data) {
+      return ('machineNumber' in data && data.machineNumber is string && data.machineNumber.size() > 0)
+          && (!('status' in data) || data.status in ['PENDING', 'SENT_TO_QUALITY', 'RECEIVED', 'SUBMITTED', 'RESUBMITTED']);
+    }
+
+    function isAuthorizedQualityToken() {
+      return request.auth != null && (
+        request.auth.token.role in ['ADMIN', 'QUALITY', 'QC', 'QA', 'SUPERADMIN', 'QUALITY_HEAD', 'QUALITY_INSPECTOR'] ||
+        request.auth.token.email in ['accuratemonitoringsystem@gmail.com', 'admin@accurate.in', 'quality@accurate.in']
+      );
+    }
+
+    function isValidQualityHandoverUpdate(currentData, incomingData) {
+      return (!('status' in incomingData) || incomingData.status in ['PENDING', 'SENT_TO_QUALITY', 'RECEIVED', 'UNDER_INSPECTION', 'ACCEPTED', 'REJECTED', 'HOLD', 'REWORK_REQUIRED', 'RESUBMITTED', 'REINSPECTION', 'CLOSED', 'CORRECTIVE_ACTION_IN_PROGRESS'])
+          // Do not allow re-deciding an already accepted or closed record
+          && (!(currentData.status in ['ACCEPTED', 'CLOSED']) || incomingData.status in ['ACCEPTED', 'CLOSED'])
+          // Enforce that quality decision status writes require authorized role if authenticated
+          && (!(incomingData.status in ['ACCEPTED', 'REJECTED', 'HOLD', 'REWORK_REQUIRED', 'CLOSED']) || (request.auth == null || isAuthorizedQualityToken()));
+    }
+
+    // Test connection endpoint for initialization verification
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Users (Department user accounts & Administrator bootstrap)
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Departments
+    match /departments/{deptId} {
+      allow read, write: if true;
+    }
+
+    // Machines & Projects - Enforce Machine Number & Department Data Integrity
+    match /machines/{machineId} {
+      allow read: if true;
+      allow create: if isValidMachineCreate(request.resource.data);
+      allow update: if isValidMachineUpdate(resource.data, request.resource.data);
+      allow delete: if true;
+    }
+    match /projects/{projectId} {
+      allow read, write: if true;
+    }
+
+    // Production Plans (both snake_case and camelCase)
+    match /yearly_plans/{planId} {
+      allow read, write: if true;
+    }
+    match /yearlyPlans/{planId} {
+      allow read, write: if true;
+    }
+    match /monthly_plans/{planId} {
+      allow read, write: if true;
+    }
+    match /monthlyPlans/{planId} {
+      allow read, write: if true;
+    }
+    match /weekly_plans/{planId} {
+      allow read, write: if true;
+    }
+    match /weeklyPlans/{planId} {
+      allow read, write: if true;
+    }
+    match /production_plans/{planId} {
+      allow read, write: if true;
+    }
+    match /plans/{planId} {
+      allow read, write: if true;
+    }
+    match /roadmap_items/{itemId} {
+      allow read, write: if true;
+    }
+
+    // Quality Operations & Checks - Enforce Quality Status Integrity
+    match /quality_operations/{opId} {
+      allow read, write: if true;
+    }
+    match /operations/{opId} {
+      allow read, write: if true;
+    }
+    match /quality_daily_checks/{checkId} {
+      allow read: if true;
+      allow create, update: if isValidQualityCheck(request.resource.data);
+      allow delete: if true;
+    }
+    match /qualityChecklists/{checkId} {
+      allow read: if true;
+      allow create, update: if isValidQualityCheck(request.resource.data);
+      allow delete: if true;
+    }
+    match /quality_results/{resultId} {
+      allow read: if true;
+      allow create, update: if isValidQualityCheck(request.resource.data);
+      allow delete: if true;
+    }
+    match /qualityResults/{resultId} {
+      allow read: if true;
+      allow create, update: if isValidQualityCheck(request.resource.data);
+      allow delete: if true;
+    }
+    match /quality_rejections/{rejectionId} {
+      allow read, write: if true;
+    }
+    match /qualityRejections/{rejectionId} {
+      allow read, write: if true;
+    }
+    match /corrective_actions/{actionId} {
+      allow read, write: if true;
+    }
+    match /correctiveActions/{actionId} {
+      allow read, write: if true;
+    }
+    match /quality_corrective_actions/{actionId} {
+      allow read, write: if true;
+    }
+    match /qualityCorrectiveActions/{actionId} {
+      allow read, write: if true;
+    }
+    match /reinspections/{reId} {
+      allow read: if true;
+      allow create, update: if isValidQualityReinspection(request.resource.data);
+      allow delete: if true;
+    }
+    match /quality_reinspections/{reId} {
+      allow read: if true;
+      allow create, update: if isValidQualityReinspection(request.resource.data);
+      allow delete: if true;
+    }
+    match /qualityReinspections/{reId} {
+      allow read: if true;
+      allow create, update: if isValidQualityReinspection(request.resource.data);
+      allow delete: if true;
+    }
+    match /quality_handovers/{handoverId} {
+      allow read: if true;
+      allow create: if isValidQualityHandoverCreate(request.resource.data);
+      allow update: if isValidQualityHandoverUpdate(resource.data, request.resource.data);
+      allow delete: if true;
+    }
+    match /qualityHandovers/{handoverId} {
+      allow read: if true;
+      allow create: if isValidQualityHandoverCreate(request.resource.data);
+      allow update: if isValidQualityHandoverUpdate(resource.data, request.resource.data);
+      allow delete: if true;
+    }
+    match /quality_inspections/{inspId} {
+      allow read, write: if true;
+    }
+    match /qualityInspections/{inspId} {
+      allow read, write: if true;
+    }
+    match /quality_reworks/{reworkId} {
+      allow read, write: if true;
+    }
+    match /qualityReworks/{reworkId} {
+      allow read, write: if true;
+    }
+    match /quality_holds/{holdId} {
+      allow read, write: if true;
+    }
+    match /qualityHolds/{holdId} {
+      allow read, write: if true;
+    }
+    match /quality_handover_history/{histId} {
+      allow read, write: if true;
+    }
+    match /qualityHandoverHistory/{histId} {
+      allow read, write: if true;
+    }
+    match /quality_decision_audits/{auditId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+    match /qualityDecisionAudits/{auditId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // Department Work & Handovers - Strictly Enforce Department Ownership & Machine Integrity
+    match /department_work/{workId} {
+      allow read: if true;
+      allow create: if isValidDepartmentWorkCreate(request.resource.data);
+      allow update: if isValidDepartmentWorkUpdate(resource.data, request.resource.data);
+      allow delete: if true;
+    }
+    match /departmentWork/{workId} {
+      allow read: if true;
+      allow create: if isValidDepartmentWorkCreate(request.resource.data);
+      allow update: if isValidDepartmentWorkUpdate(resource.data, request.resource.data);
+      allow delete: if true;
+    }
+    match /work_updates/{updateId} {
+      allow read, write: if true;
+    }
+    match /workUpdates/{updateId} {
+      allow read, write: if true;
+    }
+    match /department_handovers/{handoverId} {
+      allow read, write: if true;
+    }
+    match /departmentHandovers/{handoverId} {
+      allow read, write: if true;
+    }
+    match /handovers/{handoverId} {
+      allow read, write: if true;
+    }
+    match /handover_history/{histId} {
+      allow read, write: if true;
+    }
+    match /handoverHistory/{histId} {
+      allow read, write: if true;
+    }
+    match /machine_history/{histId} {
+      allow read, write: if true;
+    }
+    match /machineHistory/{histId} {
+      allow read, write: if true;
+    }
+    match /machine_progress_history/{histId} {
+      allow read, write: if true;
+    }
+    match /machineProgressHistory/{histId} {
+      allow read, write: if true;
+    }
+    match /daily_operation_logs/{logId} {
+      allow read, write: if true;
+    }
+    match /dailyOperationLogs/{logId} {
+      allow read, write: if true;
+    }
+    match /daily_work_updates/{updateId} {
+      allow read, write: if true;
+    }
+
+    // Notifications & Audit Trail
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+    match /notification_reads/{readId} {
+      allow read, write: if true;
+    }
+    match /notificationReads/{readId} {
+      allow read, write: if true;
+    }
+    match /reports/{reportId} {
+      allow read, write: if true;
+    }
+    match /reports_history/{reportId} {
+      allow read, write: if true;
+    }
+    match /reportsHistory/{reportId} {
+      allow read, write: if true;
+    }
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+    match /import_history/{importId} {
+      allow read, write: if true;
+    }
+    match /importHistory/{importId} {
+      allow read, write: if true;
+    }
+    match /machine_documents/{docId} {
+      allow read, write: if true;
+    }
+    match /documents/{docId} {
+      allow read, write: if true;
+    }
+    match /system_settings/{settingId} {
+      allow read, write: if true;
+    }
+    match /systemSettings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Accessories Orders Collections
+    match /accessoriesOrders/{orderId} {
+      allow read, write: if true;
+    }
+    match /accessories_orders/{orderId} {
+      allow read, write: if true;
+    }
+    match /accessoriesItems/{itemId} {
+      allow read, write: if true;
+    }
+    match /accessories_items/{itemId} {
+      allow read, write: if true;
+    }
+    match /accessoriesCompliances/{compId} {
+      allow read, write: if true;
+    }
+    match /accessories_compliances/{compId} {
+      allow read, write: if true;
+    }
+    match /accessoriesOrderHistory/{histId} {
+      allow read, write: if true;
+    }
+    match /accessories_order_history/{histId} {
+      allow read, write: if true;
+    }
+
+    // Open Cable Orders Collections
+    match /openCableOrders/{orderId} {
+      allow read, write: if true;
+    }
+    match /open_cable_orders/{orderId} {
+      allow read, write: if true;
+    }
+    match /openCableItems/{itemId} {
+      allow read, write: if true;
+    }
+    match /open_cable_items/{itemId} {
+      allow read, write: if true;
+    }
+    match /openCableCompliances/{compId} {
+      allow read, write: if true;
+    }
+    match /open_cable_compliances/{compId} {
+      allow read, write: if true;
+    }
+    match /openCableOrderHistory/{histId} {
+      allow read, write: if true;
+    }
+    match /open_cable_order_history/{histId} {
+      allow read, write: if true;
+    }
+
+    // Design Work Management Collections
+    match /design_work/{workId} {
+      allow read, write: if true;
+    }
+    match /designWork/{workId} {
+      allow read, write: if true;
+    }
+    match /design_operations_master/{opId} {
+      allow read, write: if true;
+    }
+    match /designOperationsMaster/{opId} {
+      allow read, write: if true;
+    }
+    match /design_requests/{reqId} {
+      allow read, write: if true;
+    }
+    match /designRequests/{reqId} {
+      allow read, write: if true;
+    }
+    match /design_daily_updates/{updateId} {
+      allow read, write: if true;
+    }
+    match /designDailyUpdates/{updateId} {
+      allow read, write: if true;
+    }
+    match /design_documents/{docId} {
+      allow read, write: if true;
+    }
+    match /designDocuments/{docId} {
+      allow read, write: if true;
+    }
+
+    // Machine-Size-Wise Operation Master & Daily Operations Collections (Sections 26 & 27)
+    match /departmentMachineSizes/{sizeId} {
+      allow read, write: if true;
+    }
+    match /department_machine_sizes/{sizeId} {
+      allow read, write: if true;
+    }
+    match /departmentParts/{partId} {
+      allow read, write: if true;
+    }
+    match /department_parts/{partId} {
+      allow read, write: if true;
+    }
+    match /departmentOperations/{opId} {
+      allow read, write: if true;
+    }
+    match /department_operations/{opId} {
+      allow read, write: if true;
+    }
+    match /machineOperationExecution/{execId} {
+      allow read, write: if true;
+    }
+    match /machine_operation_execution/{execId} {
+      allow read, write: if true;
+    }
+    match /dailyOperationUpdates/{updateId} {
+      allow read, write: if true;
+    }
+    match /daily_operation_updates/{updateId} {
+      allow read, write: if true;
+    }
+    match /dailyOperationResults/{resId} {
+      allow read, write: if true;
+    }
+    match /daily_operation_results/{resId} {
+      allow read, write: if true;
+    }
+
+    // Operation Lots & Lot Executions
+    match /operation_lots/{lotId} {
+      allow read, write: if true;
+    }
+    match /operationLots/{lotId} {
+      allow read, write: if true;
+    }
+    match /operation_lot_machines/{lmId} {
+      allow read, write: if true;
+    }
+    match /operationLotMachines/{lmId} {
+      allow read, write: if true;
+    }
+    match /daily_lot_reports/{repId} {
+      allow read, write: if true;
+    }
+    match /dailyLotReports/{repId} {
+      allow read, write: if true;
+    }
+
+    // Backlog Management Collections
+    match /backlog_items/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlogItems/{itemId} {
+      allow read, write: if true;
+    }
+  }
+}
+

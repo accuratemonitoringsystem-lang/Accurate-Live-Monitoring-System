@@ -1,0 +1,667 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access and department assignment",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["ADMIN", "PLANNING", "QUALITY", "DEPARTMENT USER", "MANAGEMENT / VIEWER"] },
+        "department": { "type": "string", "maxLength": 128 },
+        "employeeId": { "type": "string", "maxLength": 64 },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "Factory operational department",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "active": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["code", "name", "active"]
+    },
+    "Machine": {
+      "title": "Machine",
+      "description": "Accurate Gauging Machine Master record",
+      "type": "object",
+      "properties": {
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "model": { "type": "string", "maxLength": 64 },
+        "project": { "type": "string", "maxLength": 128 },
+        "customer": { "type": "string", "maxLength": 128 },
+        "planMonth": { "type": "string", "maxLength": 64 },
+        "currentDepartment": { "type": "string", "maxLength": 128 },
+        "currentStatus": { "type": "string", "enum": ["Not Started", "In Progress", "On Track", "Delayed", "Quality Hold", "Completed", "Ready for Packing", "Dispatched"] },
+        "plannedDate": { "type": "string", "maxLength": 32 },
+        "completionDate": { "type": "string", "maxLength": 32 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["machineNumber", "model", "currentDepartment", "currentStatus"]
+    },
+    "YearlyPlan": {
+      "title": "YearlyPlan",
+      "description": "Yearly production planning record",
+      "type": "object",
+      "properties": {
+        "year": { "type": "string", "maxLength": 16 },
+        "department": { "type": "string", "maxLength": 128 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "project": { "type": "string", "maxLength": 128 },
+        "targetQuantity": { "type": "number" },
+        "targetAmount": { "type": "number" },
+        "plannedStartDate": { "type": "string", "maxLength": 32 },
+        "plannedEndDate": { "type": "string", "maxLength": 32 },
+        "responsiblePerson": { "type": "string", "maxLength": 128 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["year", "department", "targetQuantity"]
+    },
+    "MonthlyPlan": {
+      "title": "MonthlyPlan",
+      "description": "Monthly production planning record",
+      "type": "object",
+      "properties": {
+        "month": { "type": "string", "maxLength": 32 },
+        "year": { "type": "string", "maxLength": 16 },
+        "department": { "type": "string", "maxLength": 128 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "project": { "type": "string", "maxLength": 128 },
+        "operationWork": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 64 },
+        "plannedQuantity": { "type": "number" },
+        "plannedTime": { "type": "string", "maxLength": 64 },
+        "targetAmount": { "type": "number" },
+        "actualQuantity": { "type": "number" },
+        "responsibleEmployee": { "type": "string", "maxLength": 128 },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "plannedStartDate": { "type": "string", "maxLength": 32 },
+        "plannedEndDate": { "type": "string", "maxLength": 32 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["month", "year", "department", "plannedQuantity"]
+    },
+    "WeeklyPlan": {
+      "title": "WeeklyPlan",
+      "description": "Weekly production planning record",
+      "type": "object",
+      "properties": {
+        "weekStartDate": { "type": "string", "maxLength": 32 },
+        "weekEndDate": { "type": "string", "maxLength": 32 },
+        "department": { "type": "string", "maxLength": 128 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "project": { "type": "string", "maxLength": 128 },
+        "operationWork": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 64 },
+        "plannedQuantity": { "type": "number" },
+        "plannedTime": { "type": "string", "maxLength": 64 },
+        "actualQuantity": { "type": "number" },
+        "responsibleEmployee": { "type": "string", "maxLength": 128 },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["weekStartDate", "weekEndDate", "department", "plannedQuantity"]
+    },
+    "QualityOperation": {
+      "title": "QualityOperation",
+      "description": "Model-wise Quality Master Operation definition",
+      "type": "object",
+      "properties": {
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "enum": ["Manufacturing", "Bought-Out", "Other"] },
+        "operationName": { "type": "string", "maxLength": 200 },
+        "partCode": { "type": "string", "maxLength": 64 },
+        "srNo": { "type": "string", "maxLength": 32 },
+        "type": { "type": "string", "maxLength": 64 },
+        "processDepartment": { "type": "string", "maxLength": 128 },
+        "plannedInspectionTime": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 500 },
+        "specificationRequirement": { "type": "string", "maxLength": 500 },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["machineModel", "category", "operationName", "active"]
+    },
+    "QualityDailyCheck": {
+      "title": "QualityDailyCheck",
+      "description": "Machine-specific daily quality inspection record",
+      "type": "object",
+      "properties": {
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "operationId": { "type": "string", "maxLength": 128 },
+        "operationName": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 64 },
+        "date": { "type": "string", "maxLength": 32 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 128 },
+        "time": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["Accept", "Reject", "Hold", "Pending"] },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["machineNumber", "machineModel", "operationId", "status", "date"]
+    },
+    "QualityRejection": {
+      "title": "QualityRejection",
+      "description": "Quality rejection, corrective action, and re-inspection workflow record",
+      "type": "object",
+      "properties": {
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "operationId": { "type": "string", "maxLength": 128 },
+        "operationName": { "type": "string", "maxLength": 200 },
+        "rejectionReason": { "type": "string", "maxLength": 128 },
+        "specification": { "type": "string", "maxLength": 500 },
+        "actualFinding": { "type": "string", "maxLength": 500 },
+        "concernedDepartment": { "type": "string", "maxLength": 128 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "attachmentUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["Rejected", "Corrective Action Submitted", "Re-inspection Pending", "Accepted", "Closed"] },
+        "correctiveAction": { "type": "string", "maxLength": 500 },
+        "correctiveActionBy": { "type": "string", "maxLength": 128 },
+        "correctiveActionDate": { "type": "string", "maxLength": 32 },
+        "reinspectionResult": { "type": "string", "maxLength": 64 },
+        "reinspectionRemarks": { "type": "string", "maxLength": 500 },
+        "reinspectionDate": { "type": "string", "maxLength": 32 },
+        "reinspectedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["machineNumber", "rejectionReason", "concernedDepartment", "status"]
+    },
+    "DepartmentWork": {
+      "title": "DepartmentWork",
+      "description": "Department work assignment and daily update record",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200 },
+        "department": { "type": "string", "maxLength": 128 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "operationWork": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 64 },
+        "plannedQuantity": { "type": "number" },
+        "actualQuantity": { "type": "number" },
+        "plannedTime": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed", "Delayed"] },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "assignedTo": { "type": "string", "maxLength": 128 },
+        "dueDate": { "type": "string", "maxLength": 32 },
+        "delayReason": { "type": "string", "maxLength": 500 },
+        "revisedDate": { "type": "string", "maxLength": 32 },
+        "correctiveAction": { "type": "string", "maxLength": 500 },
+        "completionTime": { "type": "string", "maxLength": 64 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["department", "status"]
+    },
+    "DepartmentHandover": {
+      "title": "DepartmentHandover",
+      "description": "Inter-department work handover record",
+      "type": "object",
+      "properties": {
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "workDescription": { "type": "string", "maxLength": 300 },
+        "sendingDepartment": { "type": "string", "maxLength": 128 },
+        "receivingDepartment": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "attachmentUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["Pending Acceptance", "Accepted", "In Progress", "Completed", "Issue Raised", "Sent Back"] },
+        "acceptedBy": { "type": "string", "maxLength": 128 },
+        "acceptedDate": { "type": "string", "maxLength": 32 },
+        "issueRemarks": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["machineNumber", "sendingDepartment", "receivingDepartment", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real system event notification",
+      "type": "object",
+      "properties": {
+        "recipientDepartment": { "type": "string", "maxLength": 128 },
+        "recipientRole": { "type": "string", "maxLength": 64 },
+        "recipientId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 500 },
+        "type": { "type": "string", "maxLength": 64 },
+        "linkId": { "type": "string", "maxLength": 128 },
+        "linkType": { "type": "string", "maxLength": 64 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "message", "type", "read"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "System audit trail record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "time": { "type": "string", "maxLength": 32 },
+        "action": { "type": "string", "maxLength": 128 },
+        "module": { "type": "string", "maxLength": 64 },
+        "recordId": { "type": "string", "maxLength": 128 },
+        "oldValue": { "type": "string", "maxLength": 500 },
+        "newValue": { "type": "string", "maxLength": 500 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "module", "timestamp"]
+    },
+    "ImportHistory": {
+      "title": "ImportHistory",
+      "description": "Excel file import tracking record",
+      "type": "object",
+      "properties": {
+        "fileName": { "type": "string", "maxLength": 200 },
+        "uploadedBy": { "type": "string", "maxLength": 128 },
+        "uploadedByEmail": { "type": "string", "maxLength": 128 },
+        "uploadDateTime": { "type": "string", "maxLength": 64 },
+        "totalRows": { "type": "number" },
+        "importedCount": { "type": "number" },
+        "duplicateCount": { "type": "number" },
+        "invalidCount": { "type": "number" },
+        "status": { "type": "string", "maxLength": 32 },
+        "module": { "type": "string", "maxLength": 64 },
+        "errorDetails": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["fileName", "uploadedBy", "uploadDateTime", "status"]
+    },
+    "MachineDocument": {
+      "title": "MachineDocument",
+      "description": "Engineering drawing, inspection document, or photo in document vault",
+      "type": "object",
+      "properties": {
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "enum": ["Balloon Drawing", "Machine Drawing", "Inspection Drawing", "Quality Documents", "Inspection Reports", "Previous Reports", "Photos", "Other Documents"] },
+        "title": { "type": "string", "maxLength": 200 },
+        "fileName": { "type": "string", "maxLength": 200 },
+        "fileSize": { "type": "number" },
+        "fileData": { "type": "string", "maxLength": 1000000 },
+        "version": { "type": "string", "maxLength": 32 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "uploadedBy": { "type": "string", "maxLength": 128 },
+        "uploadedAt": { "type": "string" }
+      },
+      "required": ["machineNumber", "category", "title"]
+    },
+    "QualityHandover": {
+      "title": "QualityHandover",
+      "description": "Department to Quality machine handover record",
+      "type": "object",
+      "properties": {
+        "handoverId": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineModel": { "type": "string", "maxLength": 64 },
+        "project": { "type": "string", "maxLength": 128 },
+        "customer": { "type": "string", "maxLength": 128 },
+        "sendingDepartment": { "type": "string", "maxLength": 128 },
+        "receivingDepartment": { "type": "string", "maxLength": 128 },
+        "employee": { "type": "string", "maxLength": 128 },
+        "work": { "type": "string", "maxLength": 500 },
+        "operation": { "type": "string", "maxLength": 200 },
+        "partCode": { "type": "string", "maxLength": 64 },
+        "quantity": { "type": "number" },
+        "handoverDate": { "type": "string", "maxLength": 32 },
+        "requiredInspectionDate": { "type": "string", "maxLength": 32 },
+        "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+        "status": { "type": "string", "enum": ["SENT_TO_QUALITY", "RECEIVED", "UNDER_INSPECTION", "ACCEPTED", "REJECTED", "HOLD", "REWORK_REQUIRED", "CORRECTIVE_ACTION_IN_PROGRESS", "RESUBMITTED", "REINSPECTION", "CLOSED"] },
+        "currentInspectionCycle": { "type": "number" },
+        "remarks": { "type": "string", "maxLength": 1000 },
+        "attachment": { "type": "string", "maxLength": 1000000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["handoverId", "machineNumber", "sendingDepartment", "operation", "status"]
+    },
+    "QualityInspection": {
+      "title": "QualityInspection",
+      "description": "Quality inspection execution record",
+      "type": "object",
+      "properties": {
+        "handoverId": { "type": "string", "maxLength": 64 },
+        "inspectionCycle": { "type": "number" },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "operation": { "type": "string", "maxLength": 200 },
+        "inspector": { "type": "string", "maxLength": 128 },
+        "inspectionDate": { "type": "string", "maxLength": 32 },
+        "result": { "type": "string", "enum": ["ACCEPT", "REJECT", "HOLD"] },
+        "remarks": { "type": "string", "maxLength": 1000 },
+        "attachment": { "type": "string", "maxLength": 1000000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["handoverId", "inspectionCycle", "inspector", "result"]
+    },
+    "QualityHold": {
+      "title": "QualityHold",
+      "description": "Quality hold tracking record",
+      "type": "object",
+      "properties": {
+        "handoverId": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "department": { "type": "string", "maxLength": 128 },
+        "reason": { "type": "string", "maxLength": 500 },
+        "expectedReviewDate": { "type": "string", "maxLength": 32 },
+        "remarks": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["handoverId", "reason", "status"]
+    },
+    "QualityCorrectiveAction": {
+      "title": "QualityCorrectiveAction",
+      "description": "Corrective action record for rejected handovers",
+      "type": "object",
+      "properties": {
+        "handoverId": { "type": "string", "maxLength": 64 },
+        "rejectionId": { "type": "string", "maxLength": 64 },
+        "inspectionCycle": { "type": "number" },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "department": { "type": "string", "maxLength": 128 },
+        "originalIssue": { "type": "string", "maxLength": 500 },
+        "correctiveAction": { "type": "string", "maxLength": 1000 },
+        "actionTaken": { "type": "string", "maxLength": 1000 },
+        "responsibleEmployee": { "type": "string", "maxLength": 128 },
+        "completionDate": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["handoverId", "department", "status"]
+    },
+    "QualityHandoverHistory": {
+      "title": "QualityHandoverHistory",
+      "description": "Audit history entry for quality handovers",
+      "type": "object",
+      "properties": {
+        "handoverId": { "type": "string", "maxLength": 64 },
+        "timestamp": { "type": "string" },
+        "date": { "type": "string", "maxLength": 32 },
+        "time": { "type": "string", "maxLength": 32 },
+        "action": { "type": "string", "maxLength": 128 },
+        "department": { "type": "string", "maxLength": 128 },
+        "user": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["handoverId", "action", "timestamp"]
+    },
+    "DepartmentMachineSize": {
+      "title": "DepartmentMachineSize",
+      "description": "Department-specific machine size definition",
+      "type": "object",
+      "properties": {
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "machineSizeId": { "type": "string", "maxLength": 64 },
+        "machineSize": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 256 },
+        "active": { "type": "boolean" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["departmentId", "machineSizeId", "machineSize", "active"]
+    },
+    "DepartmentPart": {
+      "title": "DepartmentPart",
+      "description": "Part configured under a machine size in a department",
+      "type": "object",
+      "properties": {
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "machineSizeId": { "type": "string", "maxLength": 64 },
+        "partId": { "type": "string", "maxLength": 64 },
+        "partName": { "type": "string", "maxLength": 128 },
+        "partCode": { "type": "string", "maxLength": 64 },
+        "sequence": { "type": "number" },
+        "description": { "type": "string", "maxLength": 256 },
+        "active": { "type": "boolean" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["departmentId", "machineSizeId", "partId", "partName", "active"]
+    },
+    "DepartmentOperation": {
+      "title": "DepartmentOperation",
+      "description": "Configured operation under a part for a machine size in a department",
+      "type": "object",
+      "properties": {
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "machineSizeId": { "type": "string", "maxLength": 64 },
+        "partId": { "type": "string", "maxLength": 64 },
+        "operationId": { "type": "string", "maxLength": 64 },
+        "operationName": { "type": "string", "maxLength": 128 },
+        "operationCode": { "type": "string", "maxLength": 64 },
+        "sequence": { "type": "number" },
+        "description": { "type": "string", "maxLength": 256 },
+        "standardTime": { "type": "string", "maxLength": 64 },
+        "targetQuantity": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 32 },
+        "weight": { "type": "number" },
+        "active": { "type": "boolean" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["departmentId", "machineSizeId", "partId", "operationId", "operationName", "active"]
+    },
+    "MachineOperationExecution": {
+      "title": "MachineOperationExecution",
+      "description": "Execution status of a specific operation for a specific machine",
+      "type": "object",
+      "properties": {
+        "machineId": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineSize": { "type": "string", "maxLength": 64 },
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "partId": { "type": "string", "maxLength": 64 },
+        "partName": { "type": "string", "maxLength": 128 },
+        "operationId": { "type": "string", "maxLength": 64 },
+        "operationName": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["NOT STARTED", "IN PROGRESS", "COMPLETED", "HOLD"] },
+        "completed": { "type": "boolean" },
+        "completedBy": { "type": "string", "maxLength": 128 },
+        "completedAt": { "type": "string" },
+        "holdReason": { "type": "string", "maxLength": 256 },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "weight": { "type": "number" },
+        "lastUpdatedAt": { "type": "string" }
+      },
+      "required": ["machineNumber", "machineSize", "departmentId", "partId", "operationId", "status", "completed"]
+    },
+    "DailyOperationUpdate": {
+      "title": "DailyOperationUpdate",
+      "description": "Daily work submission record for a machine",
+      "type": "object",
+      "properties": {
+        "updateId": { "type": "string", "maxLength": 64 },
+        "machineId": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineSize": { "type": "string", "maxLength": 64 },
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "employeeId": { "type": "string", "maxLength": 64 },
+        "employeeName": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "totalOperations": { "type": "number" },
+        "completedOperations": { "type": "number" },
+        "completionPercentage": { "type": "number" },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["updateId", "machineNumber", "machineSize", "departmentId", "employeeName", "date", "completionPercentage"]
+    },
+    "DailyOperationResult": {
+      "title": "DailyOperationResult",
+      "description": "Individual operation execution result recorded in a daily update",
+      "type": "object",
+      "properties": {
+        "updateId": { "type": "string", "maxLength": 64 },
+        "machineId": { "type": "string", "maxLength": 64 },
+        "machineNumber": { "type": "string", "maxLength": 64 },
+        "machineSize": { "type": "string", "maxLength": 64 },
+        "departmentId": { "type": "string", "maxLength": 128 },
+        "operationId": { "type": "string", "maxLength": 64 },
+        "operationName": { "type": "string", "maxLength": 128 },
+        "partId": { "type": "string", "maxLength": 64 },
+        "partName": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["NOT STARTED", "IN PROGRESS", "COMPLETED", "HOLD"] },
+        "completed": { "type": "boolean" },
+        "remarks": { "type": "string", "maxLength": 500 },
+        "holdReason": { "type": "string", "maxLength": 256 },
+        "startTime": { "type": "string", "maxLength": 32 },
+        "completionTime": { "type": "string", "maxLength": 32 },
+        "employeeId": { "type": "string", "maxLength": 64 },
+        "employeeName": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["updateId", "departmentId", "operationId", "partId", "status", "completed", "date"]
+    }
+  },
+  "firestore": {
+    "/departmentMachineSizes/{sizeId}": {
+      "schema": "DepartmentMachineSize",
+      "description": "Department machine size masters"
+    },
+    "/departmentParts/{partId}": {
+      "schema": "DepartmentPart",
+      "description": "Department part masters under machine sizes"
+    },
+    "/departmentOperations/{opId}": {
+      "schema": "DepartmentOperation",
+      "description": "Department operation master under parts and sizes"
+    },
+    "/machineOperationExecution/{execId}": {
+      "schema": "MachineOperationExecution",
+      "description": "Machine-specific operation execution states"
+    },
+    "/dailyOperationUpdates/{updateId}": {
+      "schema": "DailyOperationUpdate",
+      "description": "Daily operation progress updates"
+    },
+    "/dailyOperationResults/{resId}": {
+      "schema": "DailyOperationResult",
+      "description": "Daily operation item execution results"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection"
+    },
+    "/departments/{departmentId}": {
+      "schema": "Department",
+      "description": "Operational departments of Accurate Gauging"
+    },
+    "/machines/{machineId}": {
+      "schema": "Machine",
+      "description": "Master list of machines"
+    },
+    "/yearly_plans/{planId}": {
+      "schema": "YearlyPlan",
+      "description": "Yearly production planning records"
+    },
+    "/monthly_plans/{planId}": {
+      "schema": "MonthlyPlan",
+      "description": "Monthly production planning records"
+    },
+    "/weekly_plans/{planId}": {
+      "schema": "WeeklyPlan",
+      "description": "Weekly production planning records"
+    },
+    "/quality_operations/{operationId}": {
+      "schema": "QualityOperation",
+      "description": "Model-wise Quality Master Operation registry"
+    },
+    "/quality_daily_checks/{checkId}": {
+      "schema": "QualityDailyCheck",
+      "description": "Machine-specific daily quality operation inspection results"
+    },
+    "/quality_rejections/{rejectionId}": {
+      "schema": "QualityRejection",
+      "description": "Quality rejection, corrective action, and re-inspection workflows"
+    },
+    "/department_work/{workId}": {
+      "schema": "DepartmentWork",
+      "description": "Department work orders and status tracking"
+    },
+    "/department_handovers/{handoverId}": {
+      "schema": "DepartmentHandover",
+      "description": "Work handover between departments"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "System event notifications"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Complete audit trail for all operational changes"
+    },
+    "/import_history/{importId}": {
+      "schema": "ImportHistory",
+      "description": "Excel import history logs"
+    },
+    "/machine_documents/{docId}": {
+      "schema": "MachineDocument",
+      "description": "Machine drawings and document vault records"
+    },
+    "/quality_handovers/{handoverId}": {
+      "schema": "QualityHandover",
+      "description": "Quality handovers from departments"
+    },
+    "/quality_inspections/{inspId}": {
+      "schema": "QualityInspection",
+      "description": "Quality inspection records"
+    },
+    "/quality_holds/{holdId}": {
+      "schema": "QualityHold",
+      "description": "Quality hold records"
+    },
+    "/quality_corrective_actions/{actionId}": {
+      "schema": "QualityCorrectiveAction",
+      "description": "Quality corrective action records"
+    },
+    "/quality_handover_history/{histId}": {
+      "schema": "QualityHandoverHistory",
+      "description": "Quality handover audit trail"
+    }
+  }
+}

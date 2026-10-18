@@ -1,0 +1,6 @@
+{
+  "name": "Accurate Manufacturing Planning & Monitoring System",
+  "description": "Enterprise manufacturing planning and monitoring system for Accurate Gauging and Instruments Pvt Ltd.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

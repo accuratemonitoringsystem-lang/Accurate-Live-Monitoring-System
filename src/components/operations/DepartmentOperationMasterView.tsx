@@ -41,12 +41,17 @@ import {
   addDepartmentMachineSize,
   updateDepartmentMachineSize,
   toggleDepartmentMachineSizeActive,
+  deleteDepartmentMachineSize,
   addDepartmentPart,
   updateDepartmentPart,
   toggleDepartmentPartActive,
+  deleteDepartmentPart,
   addDepartmentOperation,
   updateDepartmentOperation,
   toggleDepartmentOperationActive,
+  deleteDepartmentOperation,
+  clearDepartmentOperationMaster,
+  clearAllDepartmentsOperationMaster,
   ExcelImportSummary,
 } from '../../services/operationMasterService';
 import { useAuth } from '../../context/AuthContext';
@@ -108,6 +113,14 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
 
   // Excel Import Modal
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
+
+  // Deletion States
+  const [confirmDeleteSize, setConfirmDeleteSize] = useState<DepartmentMachineSize | null>(null);
+  const [confirmDeletePart, setConfirmDeletePart] = useState<DepartmentPart | null>(null);
+  const [confirmDeleteOp, setConfirmDeleteOp] = useState<DepartmentOperation | null>(null);
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
+  const [clearScope, setClearScope] = useState<'department' | 'all'>('department');
+  const [deleting, setDeleting] = useState(false);
 
   // Status & Feedback
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -470,6 +483,82 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
     }
   };
 
+  // DELETION HANDLERS
+  const handleDeleteSize = async () => {
+    if (!confirmDeleteSize?.id) return;
+    setDeleting(true);
+    try {
+      const res = await deleteDepartmentMachineSize(confirmDeleteSize.id, userProfile?.email);
+      setToast({
+        type: 'success',
+        text: `Deleted Machine Size "${confirmDeleteSize.machineSize}" (${res.deletedParts} parts & ${res.deletedOperations} operations removed).`,
+      });
+      setConfirmDeleteSize(null);
+    } catch (err: any) {
+      setToast({ type: 'error', text: err.message || 'Failed to delete Machine Size.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeletePart = async () => {
+    if (!confirmDeletePart?.id) return;
+    setDeleting(true);
+    try {
+      const res = await deleteDepartmentPart(confirmDeletePart.id, userProfile?.email);
+      setToast({
+        type: 'success',
+        text: `Deleted Part "${confirmDeletePart.partName}" (${res.deletedOperations} operations removed).`,
+      });
+      setConfirmDeletePart(null);
+    } catch (err: any) {
+      setToast({ type: 'error', text: err.message || 'Failed to delete Part.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteOp = async () => {
+    if (!confirmDeleteOp?.id) return;
+    setDeleting(true);
+    try {
+      await deleteDepartmentOperation(confirmDeleteOp.id, userProfile?.email);
+      setToast({
+        type: 'success',
+        text: `Deleted Operation "${confirmDeleteOp.operationName}".`,
+      });
+      setConfirmDeleteOp(null);
+    } catch (err: any) {
+      setToast({ type: 'error', text: err.message || 'Failed to delete Operation.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    setDeleting(true);
+    try {
+      if (clearScope === 'all') {
+        const res = await clearAllDepartmentsOperationMaster(userProfile?.email);
+        setToast({
+          type: 'success',
+          text: `Cleared Operation Master across ALL departments: Removed ${res.deletedSizes} sizes, ${res.deletedParts} parts, and ${res.deletedOperations} operations.`,
+        });
+      } else {
+        const res = await clearDepartmentOperationMaster(departmentName, userProfile?.email);
+        setToast({
+          type: 'success',
+          text: `Cleared Operation Master for ${departmentName}: Removed ${res.deletedSizes} sizes, ${res.deletedParts} parts, and ${res.deletedOperations} operations.`,
+        });
+      }
+      setShowClearAllModal(false);
+    } catch (err: any) {
+      setToast({ type: 'error', text: err.message || 'Failed to clear Operation Master.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -538,6 +627,17 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
             <Plus className="w-4 h-4" />
             <span>+ ADD MACHINE SIZE</span>
           </button>
+
+          {(machineSizes.length > 0 || parts.length > 0 || operations.length > 0) && (
+            <button
+              onClick={() => setShowClearAllModal(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 font-bold text-xs border border-rose-200 shadow-2xs flex items-center gap-1.5 transition"
+              title="Delete all machine sizes, parts, and operations configured for this department"
+            >
+              <Trash2 className="w-4 h-4 text-rose-500" />
+              <span>CLEAR ALL MASTER</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -691,12 +791,20 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
                       onClick={() => handleToggleSize(size)}
                       className={`p-1.5 rounded-lg transition ${
                         size.active
-                          ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                          ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
                           : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
                       }`}
                       title={size.active ? 'Deactivate Machine Size' : 'Activate Machine Size'}
                     >
                       <Power className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => setConfirmDeleteSize(size)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      title="Permanently Delete Machine Size"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -782,10 +890,21 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
                                 </button>
                                 <button
                                   onClick={() => handleTogglePart(part)}
-                                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                                  className={`p-1 rounded transition ${
+                                    part.active
+                                      ? 'text-slate-400 hover:text-amber-600'
+                                      : 'text-slate-400 hover:text-emerald-600'
+                                  }`}
                                   title={part.active ? 'Deactivate Part' : 'Activate Part'}
                                 >
                                   <Power className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeletePart(part)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                                  title="Permanently Delete Part"
+                                >
+                                  <Trash2 className="w-3 h-3" />
                                 </button>
                               </div>
                             </div>
@@ -876,6 +995,13 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
                                                   title={op.active ? 'Deactivate' : 'Activate'}
                                                 >
                                                   <Power className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                  onClick={() => setConfirmDeleteOp(op)}
+                                                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                                                  title="Permanently Delete Operation"
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
                                                 </button>
                                               </div>
                                             </td>
@@ -1263,6 +1389,209 @@ export const DepartmentOperationMasterView: React.FC<DepartmentOperationMasterVi
           existingOperations={operations}
           onImportSuccess={handleImportSuccess}
         />
+      )}
+
+      {/* Delete Machine Size Confirmation Modal */}
+      {confirmDeleteSize && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-200">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Delete Machine Size?</h3>
+                <p className="text-xs text-slate-500 font-mono">Size: {confirmDeleteSize.machineSize}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete Machine Size <strong>{confirmDeleteSize.machineSize}</strong>?
+              This will also permanently delete all associated <strong>parts</strong> and <strong>operations</strong> configured under this machine size for {departmentName}.
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setConfirmDeleteSize(null)}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDeleteSize}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, Delete Size & Children'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Part Confirmation Modal */}
+      {confirmDeletePart && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-200">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Delete Part?</h3>
+                <p className="text-xs text-slate-500">Part: {confirmDeletePart.partName} ({confirmDeletePart.partCode})</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to delete Part <strong>{confirmDeletePart.partName}</strong>?
+              All operations associated with this part will also be permanently deleted.
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setConfirmDeletePart(null)}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDeletePart}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, Delete Part'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Operation Confirmation Modal */}
+      {confirmDeleteOp && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center border border-rose-200">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Delete Operation?</h3>
+                <p className="text-xs text-slate-500">{confirmDeleteOp.operationName} ({confirmDeleteOp.operationCode})</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to permanently delete operation <strong>{confirmDeleteOp.operationName}</strong>?
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setConfirmDeleteOp(null)}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleDeleteOp}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, Delete Operation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Operation Master Confirmation Modal */}
+      {showClearAllModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-rose-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-600 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-rose-100 flex items-center justify-center border border-rose-300">
+                <AlertTriangle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {clearScope === 'all'
+                    ? 'Clear ALL Departments Operation Master?'
+                    : `Clear ${departmentName} Operation Master?`}
+                </h3>
+                <p className="text-xs text-slate-500 font-mono">
+                  {clearScope === 'all' ? 'Scope: Entire Plant (All 20+ Departments)' : `Department: ${departmentName}`}
+                </p>
+              </div>
+            </div>
+
+            {isAdmin && (
+              <div className="my-3 p-2 bg-slate-100 rounded-xl flex items-center gap-2 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setClearScope('department')}
+                  className={`flex-1 py-1.5 rounded-lg transition ${
+                    clearScope === 'department'
+                      ? 'bg-white shadow-xs text-slate-900'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  This Department ({departmentName})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClearScope('all')}
+                  className={`flex-1 py-1.5 rounded-lg transition ${
+                    clearScope === 'all'
+                      ? 'bg-rose-600 shadow-xs text-white'
+                      : 'text-rose-600 hover:text-rose-800'
+                  }`}
+                >
+                  Plant-Wide (All Departments)
+                </button>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-600 leading-relaxed mt-2">
+              {clearScope === 'all' ? (
+                <>
+                  This action will permanently delete <strong>ALL</strong> machine sizes, parts, and operational steps across <strong>EVERY SINGLE DEPARTMENT</strong> in the plant.
+                </>
+              ) : (
+                <>
+                  This action will permanently delete <strong>ALL</strong> machine sizes, parts, and operational steps configured for <strong>{departmentName}</strong> in the Operation Master.
+                </>
+              )}
+            </p>
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 mt-3 flex items-start gap-2">
+              <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+              <span>
+                Existing machine work orders and daily history records will remain safe, but the reusable master catalog will be reset to blank. You can re-import a clean template from Excel at any time.
+              </span>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowClearAllModal(false)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={handleClearAll}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{deleting ? 'Clearing Master...' : 'Yes, Delete All Master Data'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

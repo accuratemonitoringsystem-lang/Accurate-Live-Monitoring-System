@@ -27,6 +27,7 @@ import {
 } from './services/db';
 import {
   AuditLogEntry,
+  BacklogItem,
   Department,
   DepartmentHandover,
   DepartmentWork,
@@ -42,16 +43,23 @@ import {
   WeeklyPlan,
   YearlyPlan,
 } from './types';
+import { subscribeBacklogItems } from './services/backlogService';
 import { ExcelImportType } from './utils/excel';
 import { reconcileMonthlyPlanAssignments } from './services/reconciliationService';
 import { areMachineNumbersEqual, normalizeMachineNumber } from './utils/machineUtils';
 import { isDepartmentMatch } from './utils/departmentUtils';
 import { INITIAL_DEPARTMENTS } from './constants';
+import { purgeStaleMonthlyPlanAndBacklogStorage } from './utils/localFallbackStore';
 
 type NavigationMode = 'admin' | 'department';
 
 const AppContent: React.FC = () => {
   const { userProfile, loading, signOut } = useAuth();
+
+  // One-time client-side cache purge to ensure deleted monthly plans/backlogs never resurface
+  useEffect(() => {
+    purgeStaleMonthlyPlanAndBacklogStorage();
+  }, []);
 
   // Primary Navigation State
   const [navMode, setNavMode] = useState<NavigationMode>('department');
@@ -69,6 +77,7 @@ const AppContent: React.FC = () => {
   const [yearlyPlans, setYearlyPlans] = useState<YearlyPlan[]>([]);
   const [monthlyPlans, setMonthlyPlans] = useState<MonthlyPlan[]>([]);
   const [weeklyPlans, setWeeklyPlans] = useState<WeeklyPlan[]>([]);
+  const [backlogItems, setBacklogItems] = useState<BacklogItem[]>([]);
   const [qualityOps, setQualityOps] = useState<QualityOperation[]>([]);
   const [qualityChecks, setQualityChecks] = useState<QualityDailyCheck[]>([]);
   const [qualityRejections, setQualityRejections] = useState<QualityRejection[]>([]);
@@ -114,6 +123,7 @@ const AppContent: React.FC = () => {
     const unsubYear = subscribeYearlyPlans(setYearlyPlans);
     const unsubMonth = subscribeMonthlyPlans(setMonthlyPlans);
     const unsubWeek = subscribeWeeklyPlans(setWeeklyPlans);
+    const unsubBacklog = subscribeBacklogItems(undefined, setBacklogItems);
     const unsubQOps = subscribeQualityOperations(setQualityOps);
     const unsubQChecks = subscribeQualityDailyChecks(setQualityChecks);
     const unsubQRej = subscribeQualityRejections(setQualityRejections);
@@ -136,6 +146,7 @@ const AppContent: React.FC = () => {
       unsubYear();
       unsubMonth();
       unsubWeek();
+      unsubBacklog();
       unsubQOps();
       unsubQChecks();
       unsubQRej();
@@ -262,6 +273,7 @@ const AppContent: React.FC = () => {
           yearlyPlans={yearlyPlans}
           monthlyPlans={monthlyPlans}
           weeklyPlans={weeklyPlans}
+          backlogItems={backlogItems}
           qualityOps={qualityOps}
           qualityChecks={qualityChecks}
           qualityRejections={qualityRejections}
@@ -292,6 +304,7 @@ const AppContent: React.FC = () => {
           yearlyPlans={yearlyPlans}
           monthlyPlans={monthlyPlans}
           weeklyPlans={weeklyPlans}
+          backlogItems={backlogItems}
           qualityOps={qualityOps}
           qualityChecks={qualityChecks}
           qualityRejections={qualityRejections}

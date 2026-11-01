@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   query,
   where,
   orderBy,
@@ -171,6 +172,77 @@ export async function toggleDepartmentMachineSizeActive(
   userEmail?: string
 ): Promise<void> {
   await updateDepartmentMachineSize(id, { active }, userEmail);
+}
+
+/**
+ * Permanently delete a Machine Size and all its associated parts and operations.
+ */
+export async function deleteDepartmentMachineSize(
+  id: string,
+  userEmail?: string
+): Promise<{ deletedParts: number; deletedOperations: number }> {
+  const sizeDoc = await getDoc(doc(db, 'departmentMachineSizes', id));
+  if (!sizeDoc.exists()) {
+    throw new Error('Machine Size record not found.');
+  }
+  const sizeData = sizeDoc.data() as DepartmentMachineSize;
+  const deptId = sizeData.departmentId;
+  const sizeId = sizeData.machineSizeId;
+  const normDept = normalizeDepartmentKey(deptId);
+
+  // 1. Delete associated operations
+  const opQuery = query(collection(db, 'departmentOperations'));
+  const opSnap = await getDocs(opQuery);
+  const opsToDelete = opSnap.docs.filter((d) => {
+    const data = d.data() as DepartmentOperation;
+    const sameDept =
+      isDepartmentMatch(data.departmentId, deptId) ||
+      normalizeDepartmentKey(data.departmentId) === normDept;
+    const sameSize =
+      data.machineSizeId.toLowerCase() === sizeId.toLowerCase() ||
+      data.machineSizeId.toLowerCase() === (sizeData.machineSize || '').toLowerCase();
+    return sameDept && sameSize;
+  });
+
+  for (let i = 0; i < opsToDelete.length; i += 400) {
+    const batch = writeBatch(db);
+    opsToDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 2. Delete associated parts
+  const partQuery = query(collection(db, 'departmentParts'));
+  const partSnap = await getDocs(partQuery);
+  const partsToDelete = partSnap.docs.filter((d) => {
+    const data = d.data() as DepartmentPart;
+    const sameDept =
+      isDepartmentMatch(data.departmentId, deptId) ||
+      normalizeDepartmentKey(data.departmentId) === normDept;
+    const sameSize =
+      data.machineSizeId.toLowerCase() === sizeId.toLowerCase() ||
+      data.machineSizeId.toLowerCase() === (sizeData.machineSize || '').toLowerCase();
+    return sameDept && sameSize;
+  });
+
+  for (let i = 0; i < partsToDelete.length; i += 400) {
+    const batch = writeBatch(db);
+    partsToDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 3. Delete the machine size document
+  await deleteDoc(doc(db, 'departmentMachineSizes', id));
+
+  await logAudit(
+    'DELETE_MACHINE_SIZE',
+    'OPERATION_MASTER',
+    id,
+    'Deleted machine size and children',
+    `Department: ${deptId}, Size: ${sizeData.machineSize} (${sizeId}), Removed ${partsToDelete.length} parts, ${opsToDelete.length} operations`,
+    userEmail
+  );
+
+  return { deletedParts: partsToDelete.length, deletedOperations: opsToDelete.length };
 }
 
 // ============================================================================
@@ -353,6 +425,54 @@ export async function toggleDepartmentPartActive(
   userEmail?: string
 ): Promise<void> {
   await updateDepartmentPart(id, { active }, userEmail);
+}
+
+/**
+ * Permanently delete a Part and its associated operations.
+ */
+export async function deleteDepartmentPart(
+  id: string,
+  userEmail?: string
+): Promise<{ deletedOperations: number }> {
+  const partDoc = await getDoc(doc(db, 'departmentParts', id));
+  if (!partDoc.exists()) {
+    throw new Error('Part record not found.');
+  }
+  const partData = partDoc.data() as DepartmentPart;
+  const deptId = partData.departmentId;
+  const partId = partData.partId;
+  const normDept = normalizeDepartmentKey(deptId);
+
+  // Delete associated operations
+  const opQuery = query(collection(db, 'departmentOperations'));
+  const opSnap = await getDocs(opQuery);
+  const opsToDelete = opSnap.docs.filter((d) => {
+    const data = d.data() as DepartmentOperation;
+    const sameDept =
+      isDepartmentMatch(data.departmentId, deptId) ||
+      normalizeDepartmentKey(data.departmentId) === normDept;
+    const samePart = data.partId === partId || data.partId === partData.partCode;
+    return sameDept && samePart;
+  });
+
+  for (let i = 0; i < opsToDelete.length; i += 400) {
+    const batch = writeBatch(db);
+    opsToDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  await deleteDoc(doc(db, 'departmentParts', id));
+
+  await logAudit(
+    'DELETE_PART',
+    'OPERATION_MASTER',
+    id,
+    'Deleted part and operations',
+    `Department: ${deptId}, Part: ${partData.partName} (${partId}), Removed ${opsToDelete.length} operations`,
+    userEmail
+  );
+
+  return { deletedOperations: opsToDelete.length };
 }
 
 // ============================================================================
@@ -549,6 +669,160 @@ export async function toggleDepartmentOperationActive(
   userEmail?: string
 ): Promise<void> {
   await updateDepartmentOperation(id, { active }, userEmail);
+}
+
+/**
+ * Permanently delete an individual Operation.
+ */
+export async function deleteDepartmentOperation(
+  id: string,
+  userEmail?: string
+): Promise<void> {
+  const opDoc = await getDoc(doc(db, 'departmentOperations', id));
+  const opData = opDoc.exists() ? (opDoc.data() as DepartmentOperation) : null;
+
+  await deleteDoc(doc(db, 'departmentOperations', id));
+
+  await logAudit(
+    'DELETE_OPERATION',
+    'OPERATION_MASTER',
+    id,
+    'Deleted operation',
+    opData
+      ? `Department: ${opData.departmentId}, Size: ${opData.machineSizeId}, Part: ${opData.partId}, Op: ${opData.operationName}`
+      : `Operation ID: ${id}`,
+    userEmail
+  );
+}
+
+/**
+ * Clear all machine sizes, parts, and operations for a specific department.
+ */
+export async function clearDepartmentOperationMaster(
+  departmentId: string,
+  userEmail?: string
+): Promise<{ deletedSizes: number; deletedParts: number; deletedOperations: number }> {
+  const normDept = normalizeDepartmentKey(departmentId);
+
+  // 1. Operations
+  const opSnap = await getDocs(collection(db, 'departmentOperations'));
+  const opsToDelete = opSnap.docs.filter((d) => {
+    const data = d.data() as DepartmentOperation;
+    return (
+      isDepartmentMatch(data.departmentId, departmentId) ||
+      normalizeDepartmentKey(data.departmentId) === normDept ||
+      (data.departmentId && data.departmentId.toLowerCase().includes(normDept))
+    );
+  });
+  for (let i = 0; i < opsToDelete.length; i += 400) {
+    const batch = writeBatch(db);
+    opsToDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 2. Parts
+  const partSnap = await getDocs(collection(db, 'departmentParts'));
+  const partsToDelete = partSnap.docs.filter((d) => {
+    const data = d.data() as DepartmentPart;
+    return (
+      isDepartmentMatch(data.departmentId, departmentId) ||
+      normalizeDepartmentKey(data.departmentId) === normDept ||
+      (data.departmentId && data.departmentId.toLowerCase().includes(normDept))
+    );
+  });
+  for (let i = 0; i < partsToDelete.length; i += 400) {
+    const batch = writeBatch(db);
+    partsToDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  // 3. Machine Sizes
+  const sizeSnap = await getDocs(collection(db, 'departmentMachineSizes'));
+  const sizesToDelete = sizeSnap.docs.filter((d) => {
+    const data = d.data() as DepartmentMachineSize;
+    return (
+      isDepartmentMatch(data.departmentId, departmentId) ||
+      normalizeDepartmentKey(data.departmentId) === normDept ||
+      (data.departmentId && data.departmentId.toLowerCase().includes(normDept))
+    );
+  });
+  for (let i = 0; i < sizesToDelete.length; i += 400) {
+    const batch = writeBatch(db);
+    sizesToDelete.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+
+  await logAudit(
+    'CLEAR_OPERATION_MASTER',
+    'OPERATION_MASTER',
+    departmentId,
+    'Cleared all department operations master data',
+    `Department: ${departmentId}, Removed ${sizesToDelete.length} sizes, ${partsToDelete.length} parts, ${opsToDelete.length} operations`,
+    userEmail
+  );
+
+  return {
+    deletedSizes: sizesToDelete.length,
+    deletedParts: partsToDelete.length,
+    deletedOperations: opsToDelete.length,
+  };
+}
+
+/**
+ * Permanently clear Operation Master records across ALL factory departments.
+ * Removes all machine sizes, parts, operations, and design operations master records.
+ */
+export async function clearAllDepartmentsOperationMaster(
+  userEmail?: string
+): Promise<{ deletedSizes: number; deletedParts: number; deletedOperations: number; deletedDesignOps: number }> {
+  const collections = [
+    'departmentOperations',
+    'department_operations',
+    'departmentParts',
+    'department_parts',
+    'departmentMachineSizes',
+    'department_machine_sizes',
+    'design_operations_master',
+    'designOperationsMaster',
+  ];
+
+  let totalSizes = 0;
+  let totalParts = 0;
+  let totalOps = 0;
+  let totalDesignOps = 0;
+
+  for (const colName of collections) {
+    const snap = await getDocs(collection(db, colName));
+    const docs = snap.docs;
+    if (docs.length > 0) {
+      if (colName.includes('Size') || colName.includes('size')) totalSizes += docs.length;
+      else if (colName.includes('Part') || colName.includes('part')) totalParts += docs.length;
+      else if (colName.includes('design') || colName.includes('Design')) totalDesignOps += docs.length;
+      else totalOps += docs.length;
+
+      for (let i = 0; i < docs.length; i += 400) {
+        const batch = writeBatch(db);
+        docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    }
+  }
+
+  await logAudit(
+    'CLEAR_ALL_DEPARTMENTS_OPERATION_MASTER',
+    'OPERATION_MASTER',
+    'ALL_DEPARTMENTS',
+    'Cleared Operation Master across all departments',
+    `Removed ${totalSizes} sizes, ${totalParts} parts, ${totalOps} operations, ${totalDesignOps} design operations`,
+    userEmail
+  );
+
+  return {
+    deletedSizes: totalSizes,
+    deletedParts: totalParts,
+    deletedOperations: totalOps,
+    deletedDesignOps: totalDesignOps,
+  };
 }
 
 // ============================================================================

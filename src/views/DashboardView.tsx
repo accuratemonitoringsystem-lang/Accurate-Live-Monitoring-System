@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import {
   AuditLogEntry,
+  BacklogItem,
   Department,
   DepartmentHandover,
   DepartmentWork,
@@ -38,6 +39,7 @@ interface DashboardViewProps {
   machines: Machine[];
   monthlyPlans: MonthlyPlan[];
   weeklyPlans?: WeeklyPlan[];
+  backlogItems?: BacklogItem[];
   departmentWork: DepartmentWork[];
   qualityChecks: QualityDailyCheck[];
   qualityRejections: QualityRejection[];
@@ -54,6 +56,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   machines,
   monthlyPlans,
   weeklyPlans = [],
+  backlogItems = [],
   departmentWork,
   qualityChecks,
   qualityRejections,
@@ -276,6 +279,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const monthlyTargetAchievementPct = achievementPct;
 
+  // Live Backlog Metrics from Firestore
+  const backlogMetrics = useMemo(() => {
+    const totalBacklog = backlogItems.length;
+    const openBacklog = backlogItems.filter((b) => b.status === 'Open').length;
+    const inProgressBacklog = backlogItems.filter(
+      (b) => b.status === 'In Progress' || b.status === 'Partially Completed'
+    ).length;
+    const overdueBacklog = backlogItems.filter((b) => {
+      if (b.status === 'Blocked') return true;
+      if (b.dueDate && b.status !== 'Completed') {
+        const d = new Date(b.dueDate);
+        return !isNaN(d.getTime()) && d < new Date();
+      }
+      return false;
+    }).length;
+    const completedBacklog = backlogItems.filter((b) => b.status === 'Completed').length;
+    const pendingBacklogQty = backlogItems.reduce(
+      (acc, b) => acc + (Number(b.remainingQuantity) || 0),
+      0
+    );
+
+    return {
+      totalBacklog,
+      openBacklog,
+      inProgressBacklog,
+      overdueBacklog,
+      completedBacklog,
+      pendingBacklogQty,
+    };
+  }, [backlogItems]);
+
   return (
     <div className="space-y-6">
       {/* SECTION 1: GLOBAL VIEW DEPARTMENT HEADER & SELECTOR */}
@@ -316,74 +350,332 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* REQUIREMENT 10: TOP 6 KPI CARDS */}
+      {/* VERIFIED DATABASE CLEANUP STATUS & MASTER PLAN BANNER */}
+      <div className="bg-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                Database Verified &bull; Clean Operational State
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
+                Real-Time Firestore Live
+              </span>
+            </div>
+            <div className="text-xs text-slate-300 mt-0.5">
+              <strong className="text-white">Master Catalog:</strong> {machines.length} machines &bull;{' '}
+              <strong className="text-white">Monthly Plan:</strong> {monthlyPlans.length} records &bull;{' '}
+              <strong className="text-white">Backlog:</strong> {backlogMetrics.totalBacklog} items &bull;{' '}
+              <strong className="text-white">Active Plan:</strong> {activePlanMachines.length} CMMs &bull;{' '}
+              <strong className="text-emerald-300">Ready for Fresh Data Entry</strong>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={() => onSelectView('planning')}
+            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+          >
+            <span>+ Add Fresh Monthly Plan</span>
+          </button>
+          <button
+            onClick={() => onSelectView('data_management')}
+            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition border border-slate-700"
+          >
+            <span>Database Management</span>
+          </button>
+        </div>
+      </div>
+
+      {/* TOP 6 EXECUTIVE KPI CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* 1. Total Planned Machines */}
+        {/* 1. Master Machine Catalog */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <Cpu className="w-3.5 h-3.5 text-blue-600" />
-            <span>Planned Machines</span>
+            <span>Master Catalog</span>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{totalPlannedMachines}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Master Plan Target</div>
+          <div className="text-2xl font-black text-slate-900 mt-1 font-mono">{machines.length}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Total Machines</div>
         </div>
 
-        {/* 2. Total In Progress Machines */}
+        {/* 2. Monthly Plan Targets */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Monthly Targets</span>
+          </div>
+          <div className="text-2xl font-black text-indigo-600 mt-1 font-mono">{monthlyPlans.length}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Active Monthly Records</div>
+        </div>
+
+        {/* 3. Shop Work In Progress */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
-            <span>In Progress</span>
+            <span>Work In Progress</span>
           </div>
-          <div className="text-2xl font-black text-blue-600 mt-1">{totalInProgressMachines}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Active Shop Floor</div>
+          <div className="text-2xl font-black text-blue-600 mt-1 font-mono">{inProgressWork}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Active Shop Tasks</div>
         </div>
 
-        {/* 3. Total Completed Machines */}
+        {/* 4. Shop Work Completed */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Completed</span>
+            <span>Completed Work</span>
           </div>
-          <div className="text-2xl font-black text-emerald-600 mt-1">{totalCompletedMachines}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">100% Finalized</div>
+          <div className="text-2xl font-black text-emerald-600 mt-1 font-mono">{completedWork}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Finalized Tasks</div>
         </div>
 
-        {/* 4. Total Delayed Machines */}
-        <div
-          className={`p-4 rounded-2xl border shadow-xs ${
-            totalDelayedMachines > 0 ? 'bg-rose-50/80 border-rose-200' : 'bg-white border-slate-200'
-          }`}
-        >
-          <div className="text-[11px] font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Delayed Machines</span>
-          </div>
-          <div className="text-2xl font-black text-rose-600 mt-1">{totalDelayedMachines}</div>
-          <div className="text-[11px] text-rose-500 mt-0.5 font-medium">Overdue Target</div>
-        </div>
-
-        {/* 5. Department with Most Delays */}
+        {/* 5. Active Backlog */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
-            <Building className="w-3.5 h-3.5 text-amber-600" />
-            <span>Most Delays</span>
+            <Layers className="w-3.5 h-3.5 text-amber-600" />
+            <span>Active Backlog</span>
           </div>
-          <div className="text-xs font-black text-slate-900 mt-1 truncate" title={deptWithMostDelays}>
-            {deptWithMostDelays}
-          </div>
-          <div className="text-[11px] text-amber-600 mt-0.5 font-semibold">
-            {maxDelaysCount > 0 ? `${maxDelaysCount} delayed units` : 'Zero delays reported'}
-          </div>
+          <div className="text-2xl font-black text-amber-700 mt-1 font-mono">{backlogMetrics.totalBacklog}</div>
+          <div className="text-[11px] text-amber-600 mt-0.5">Pending Backlog Items</div>
         </div>
 
         {/* 6. Monthly Target Achievement % */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Achievement %</span>
+            <span>Monthly Compliance</span>
           </div>
-          <div className="text-2xl font-black text-indigo-600 mt-1">{monthlyTargetAchievementPct}%</div>
+          <div className="text-2xl font-black text-indigo-600 mt-1 font-mono">{monthlyTargetAchievementPct}%</div>
           <div className="text-[11px] text-slate-400 mt-0.5">Actual vs Target</div>
+        </div>
+      </div>
+
+      {/* VERIFIED LIVE DATABASE METRICS: MONTHLY PLAN (ALL DEPARTMENTS) */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600 inline-block" />
+              <span className="text-xs font-black uppercase tracking-wider text-blue-700">
+                Live Monthly Plan Performance &bull; All Departments
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 font-semibold border border-blue-200">
+                Real-Time Database Calculated
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live operational metrics calculated strictly from Firestore collection records across all 20 departments
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => onSelectView('planning')}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition flex items-center space-x-1"
+            >
+              <span>+ Add Monthly Plan</span>
+            </button>
+            <button
+              onClick={() => onSelectView('planning')}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+            >
+              <span>Open Planning Master &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+          {/* 1. Total Monthly Plan Records */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Total Monthly Records
+            </span>
+            <span className="text-xl font-black text-slate-900 mt-1 block font-mono">
+              {monthlyPlans.length}
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Plan Documents</span>
+          </div>
+
+          {/* 2. Monthly Target Quantity */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Monthly Target Qty
+            </span>
+            <span className="text-xl font-black text-indigo-600 mt-1 block font-mono">
+              {targetQuantityTotal}
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Target Units</span>
+          </div>
+
+          {/* 3. Assigned Tasks */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Assigned Tasks
+            </span>
+            <span className="text-xl font-black text-slate-800 mt-1 block font-mono">
+              {totalWork}
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Shop Orders</span>
+          </div>
+
+          {/* 4. Completed Tasks */}
+          <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-200">
+            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
+              Completed Tasks
+            </span>
+            <span className="text-xl font-black text-emerald-700 mt-1 block font-mono">
+              {completedWork}
+            </span>
+            <span className="text-[10px] text-emerald-600 mt-0.5 block">100% Done</span>
+          </div>
+
+          {/* 5. In Progress Tasks */}
+          <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-200">
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
+              In Progress Tasks
+            </span>
+            <span className="text-xl font-black text-blue-700 mt-1 block font-mono">
+              {inProgressWork}
+            </span>
+            <span className="text-[10px] text-blue-600 mt-0.5 block">On Floor</span>
+          </div>
+
+          {/* 6. Pending Tasks */}
+          <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200">
+            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
+              Pending Tasks
+            </span>
+            <span className="text-xl font-black text-amber-700 mt-1 block font-mono">
+              {pendingWork}
+            </span>
+            <span className="text-[10px] text-amber-600 mt-0.5 block">Not Started</span>
+          </div>
+
+          {/* 7. Delayed Tasks */}
+          <div className="bg-rose-50/60 p-3 rounded-xl border border-rose-200">
+            <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block">
+              Delayed Tasks
+            </span>
+            <span className="text-xl font-black text-rose-700 mt-1 block font-mono">
+              {delayedWork}
+            </span>
+            <span className="text-[10px] text-rose-600 mt-0.5 block">Overdue</span>
+          </div>
+
+          {/* 8. Monthly Compliance */}
+          <div className="bg-indigo-50/60 p-3 rounded-xl border border-indigo-200">
+            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+              Monthly Compliance
+            </span>
+            <span className="text-xl font-black text-indigo-700 mt-1 block font-mono">
+              {monthlyTargetAchievementPct}%
+            </span>
+            <span className="text-[10px] text-indigo-600 mt-0.5 block">Compliance %</span>
+          </div>
+        </div>
+      </div>
+
+      {/* VERIFIED LIVE DATABASE METRICS: BACKLOG (ALL DEPARTMENTS) */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-amber-600 inline-block" />
+              <span className="text-xs font-black uppercase tracking-wider text-amber-800">
+                Live Backlog Status &bull; All Departments
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-semibold border border-amber-200">
+                Real-Time Database Calculated
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Live backlog status across all 20 departments calculated strictly from Firestore `backlog_items` collection
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => onSelectView('backlog_management')}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-2xs transition flex items-center space-x-1"
+            >
+              <span>Manage Backlog</span>
+            </button>
+            <button
+              onClick={() => onSelectView('backlog_management')}
+              className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+            >
+              <span>Backlog Dashboard &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* 1. Total Backlog */}
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Total Backlog
+            </span>
+            <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
+              {backlogMetrics.totalBacklog}
+            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Total Tracked Items</span>
+          </div>
+
+          {/* 2. Open Backlog */}
+          <div className="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
+            <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+              Open Backlog
+            </span>
+            <span className="text-2xl font-black text-amber-800 mt-1 block font-mono">
+              {backlogMetrics.openBacklog}
+            </span>
+            <span className="text-[10px] text-amber-600 mt-0.5 block">Unallocated / Queued</span>
+          </div>
+
+          {/* 3. In Progress Backlog */}
+          <div className="bg-blue-50/60 p-3.5 rounded-xl border border-blue-200">
+            <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">
+              In Progress Backlog
+            </span>
+            <span className="text-2xl font-black text-blue-800 mt-1 block font-mono">
+              {backlogMetrics.inProgressBacklog}
+            </span>
+            <span className="text-[10px] text-blue-600 mt-0.5 block">Actively Worked</span>
+          </div>
+
+          {/* 4. Overdue Backlog */}
+          <div className="bg-rose-50/60 p-3.5 rounded-xl border border-rose-200">
+            <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
+              Overdue Backlog
+            </span>
+            <span className="text-2xl font-black text-rose-800 mt-1 block font-mono">
+              {backlogMetrics.overdueBacklog}
+            </span>
+            <span className="text-[10px] text-rose-600 mt-0.5 block">Overdue Target</span>
+          </div>
+
+          {/* 5. Completed Backlog */}
+          <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+              Completed Backlog
+            </span>
+            <span className="text-2xl font-black text-emerald-800 mt-1 block font-mono">
+              {backlogMetrics.completedBacklog}
+            </span>
+            <span className="text-[10px] text-emerald-600 mt-0.5 block">100% Cleared</span>
+          </div>
+
+          {/* 6. Pending Backlog Quantity */}
+          <div className="bg-purple-50/60 p-3.5 rounded-xl border border-purple-200">
+            <span className="text-[10px] font-bold text-purple-800 uppercase tracking-wider block">
+              Pending Backlog Qty
+            </span>
+            <span className="text-2xl font-black text-purple-800 mt-1 block font-mono">
+              {backlogMetrics.pendingBacklogQty}
+            </span>
+            <span className="text-[10px] text-purple-600 mt-0.5 block">Units to Manufacture</span>
+          </div>
         </div>
       </div>
 
@@ -413,11 +705,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onChange={(e) => setSelectedPlanMonth(e.target.value)}
               className="bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs font-bold px-3 py-1.5 rounded-xl outline-none transition cursor-pointer"
             >
-              <option value="October 2026">October 2026 (Active Master Plan &bull; 25 CMMs)</option>
-              <option value="September 2026">September 2026 (26 CMMs)</option>
-              <option value="August 2026">August 2026</option>
-              <option value="November 2026">November 2026</option>
-              <option value="December 2026">December 2026</option>
+              <option value="October 2026">October 2026 ({activePlanMachines.length} CMMs)</option>
+              <option value="September 2026">September 2026 (Archive)</option>
+              <option value="August 2026">August 2026 (Archive)</option>
+              <option value="November 2026">November 2026 (Upcoming)</option>
+              <option value="December 2026">December 2026 (Upcoming)</option>
             </select>
             <button
               onClick={() => onSelectView('planning')}

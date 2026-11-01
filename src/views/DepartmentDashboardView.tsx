@@ -43,6 +43,7 @@ import { DepartmentDesignRequestsView } from '../components/DepartmentDesignRequ
 import { RequestDesignSupportModal } from '../components/RequestDesignSupportModal';
 import {
   AuditLogEntry,
+  BacklogItem,
   Department,
   DepartmentHandover,
   DepartmentWork,
@@ -91,6 +92,7 @@ interface DepartmentDashboardViewProps {
   yearlyPlans: YearlyPlan[];
   monthlyPlans: MonthlyPlan[];
   weeklyPlans: WeeklyPlan[];
+  backlogItems?: BacklogItem[];
   qualityOps: QualityOperation[];
   qualityChecks: QualityDailyCheck[];
   qualityRejections: QualityRejection[];
@@ -115,6 +117,7 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
   yearlyPlans,
   monthlyPlans,
   weeklyPlans,
+  backlogItems = [],
   qualityOps,
   qualityChecks,
   qualityRejections,
@@ -173,6 +176,9 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
         if (isDepartmentMatch(p.department, '02 Planning') || !p.department) return true;
         return isDepartmentMatch(p.department, departmentName);
       });
+  const scopedBacklog = isDesignDept
+    ? []
+    : backlogItems.filter((b) => isDepartmentMatch(b.department, departmentName));
   const scopedHandovers = handovers.filter(
     (h) =>
       isDepartmentMatch(h.sendingDepartment, departmentName) ||
@@ -436,7 +442,7 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
       { id: 'monthly_plan', label: 'Monthly Plan', icon: Calendar, badge: scopedMonthly.length, badgeColor: 'bg-blue-600' },
       { id: 'weekly_plan', label: 'Weekly Plan', icon: Clock },
       { id: 'daily_updates', label: 'Daily Updates', icon: Clock },
-      { id: 'backlog', label: 'Backlog Management', icon: Layers },
+      { id: 'backlog', label: 'Backlog Management', icon: Layers, badge: scopedBacklog.length, badgeColor: 'bg-amber-600' },
       { id: 'pending_work', label: 'Pending Work', icon: Clock, badge: pendingTasks + inProgressTasks },
       { id: 'delayed_work', label: 'Delayed Work', icon: AlertTriangle, badge: delayedTasks, badgeColor: 'bg-red-500' },
       { id: 'quality_handover', label: isQualityDept ? 'Quality Receiving Deck' : 'Quality Handover', icon: ShieldCheck },

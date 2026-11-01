@@ -417,11 +417,9 @@ export function subscribeMachines(callback: (machines: Machine[]) => void) {
     firestoreUnsub = onSnapshot(
       collection(db, 'machines'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Machine));
-          list.sort((a, b) => a.machineNumber.localeCompare(b.machineNumber));
-          saveLocalCollection('machines', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Machine));
+        list.sort((a, b) => a.machineNumber.localeCompare(b.machineNumber));
+        saveLocalCollection('machines', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'machines')
     );
@@ -1165,10 +1163,8 @@ export function subscribeYearlyPlans(callback: (plans: YearlyPlan[]) => void) {
     firestoreUnsub = onSnapshot(
       collection(db, 'yearly_plans'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as YearlyPlan));
-          saveLocalCollection('yearly_plans', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as YearlyPlan));
+        saveLocalCollection('yearly_plans', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'yearly_plans')
     );
@@ -1219,10 +1215,8 @@ export function subscribeMonthlyPlans(callback: (plans: MonthlyPlan[]) => void) 
     firestoreUnsub = onSnapshot(
       collection(db, 'monthly_plans'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as MonthlyPlan));
-          saveLocalCollection('monthly_plans', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as MonthlyPlan));
+        saveLocalCollection('monthly_plans', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'monthly_plans')
     );
@@ -1382,10 +1376,8 @@ export function subscribeWeeklyPlans(callback: (plans: WeeklyPlan[]) => void) {
     firestoreUnsub = onSnapshot(
       collection(db, 'weekly_plans'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WeeklyPlan));
-          saveLocalCollection('weekly_plans', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WeeklyPlan));
+        saveLocalCollection('weekly_plans', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'weekly_plans')
     );
@@ -1516,11 +1508,9 @@ export function subscribeRoadmapItems(callback: (items: RoadmapItem[]) => void) 
     firestoreUnsub = onSnapshot(
       collection(db, 'roadmap_items'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoadmapItem));
-          list.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
-          saveLocalCollection('roadmap_items', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as RoadmapItem));
+        list.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+        saveLocalCollection('roadmap_items', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'roadmap_items')
     );
@@ -1579,21 +1569,19 @@ export function subscribeQualityOperations(callback: (ops: QualityOperation[]) =
     firestoreUnsub = onSnapshot(
       collection(db, 'operations'),
       (snap) => {
-        if (!snap.empty) {
-          const ops = snap.docs.map((d) => {
-            const data = d.data();
-            const active = data.active !== undefined ? data.active : (data.status ? data.status === 'Active' : true);
-            return {
-              id: d.id,
-              ...data,
-              active,
-              status: data.status || (active ? 'Active' : 'Inactive'),
-              specification: data.specification || data.specificationRequirement || '',
-              specificationRequirement: data.specificationRequirement || data.specification || '',
-            } as QualityOperation;
-          });
-          saveLocalCollection('quality_operations', ops);
-        }
+        const ops = snap.docs.map((d) => {
+          const data = d.data();
+          const active = data.active !== undefined ? data.active : (data.status ? data.status === 'Active' : true);
+          return {
+            id: d.id,
+            ...data,
+            active,
+            status: data.status || (active ? 'Active' : 'Inactive'),
+            specification: data.specification || data.specificationRequirement || '',
+            specificationRequirement: data.specificationRequirement || data.specification || '',
+          } as QualityOperation;
+        });
+        saveLocalCollection('quality_operations', ops);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'operations')
     );
@@ -1785,10 +1773,8 @@ export function subscribeQualityDailyChecks(callback: (checks: QualityDailyCheck
     firestoreUnsub = onSnapshot(
       collection(db, 'quality_daily_checks'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QualityDailyCheck));
-          saveLocalCollection('quality_daily_checks', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QualityDailyCheck));
+        saveLocalCollection('quality_daily_checks', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'quality_daily_checks')
     );
@@ -1864,10 +1850,8 @@ export function subscribeQualityRejections(callback: (rejections: QualityRejecti
     firestoreUnsub = onSnapshot(
       collection(db, 'quality_rejections'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QualityRejection));
-          saveLocalCollection('quality_rejections', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as QualityRejection));
+        saveLocalCollection('quality_rejections', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'quality_rejections')
     );
@@ -2004,10 +1988,8 @@ export function subscribeDepartmentWork(callback: (work: DepartmentWork[]) => vo
     firestoreUnsub = onSnapshot(
       collection(db, 'department_work'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as DepartmentWork));
-          saveLocalCollection('department_work', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as DepartmentWork));
+        saveLocalCollection('department_work', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'department_work')
     );
@@ -3710,10 +3692,8 @@ export function subscribeNotifications(
     firestoreUnsub = onSnapshot(
       collection(db, 'notifications'),
       (snap) => {
-        if (!snap.empty) {
-          const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SystemNotification));
-          saveLocalCollection('notifications', raw);
-        }
+        const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() } as SystemNotification));
+        saveLocalCollection('notifications', raw);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'notifications')
     );
@@ -3784,11 +3764,9 @@ export function subscribeAuditLogs(callback: (logs: AuditLogEntry[]) => void) {
     firestoreUnsub = onSnapshot(
       collection(db, 'audit_logs'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as AuditLogEntry));
-          list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          saveLocalCollection('audit_logs', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as AuditLogEntry));
+        list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        saveLocalCollection('audit_logs', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'audit_logs')
     );
@@ -3811,11 +3789,9 @@ export function subscribeImportHistory(callback: (history: ImportHistoryEntry[])
     firestoreUnsub = onSnapshot(
       collection(db, 'import_history'),
       (snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ImportHistoryEntry));
-          list.sort((a, b) => new Date(b.uploadDateTime).getTime() - new Date(a.uploadDateTime).getTime());
-          saveLocalCollection('import_history', list);
-        }
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ImportHistoryEntry));
+        list.sort((a, b) => new Date(b.uploadDateTime).getTime() - new Date(a.uploadDateTime).getTime());
+        saveLocalCollection('import_history', list);
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'import_history')
     );

@@ -13,8 +13,13 @@ import {
   AuditLogEntry,
   RoadmapItem,
   BacklogItem,
+  UserProfile,
 } from '../types';
 import { INITIAL_DEPARTMENTS } from '../constants';
+import {
+  STANDARD_DEPARTMENT_ACCOUNTS,
+  MASTER_ADMIN_USERNAME,
+} from '../services/authService';
 
 // 25 CMM October 2026 Master Definition
 export const SEED_OCTOBER_2026_MACHINES = [
@@ -76,113 +81,160 @@ function getStorageKey(collectionName: string): string {
 }
 
 export function generateSeedMachines(): Machine[] {
-  const now = new Date().toISOString();
-  return SEED_OCTOBER_2026_MACHINES.map((s) => ({
-    id: `MACH-${s.machineNumber}`,
-    machineNumber: s.machineNumber,
-    model: s.model,
-    machineModel: s.model,
-    machineSize: s.size,
-    size: s.size,
-    specification: s.size,
-    quantity: 1,
-    priority: s.priority,
-    month: 'October',
-    year: '2026',
-    planMonth: 'October',
-    planYear: '2026',
-    planName: 'October 2026 Master Production Plan',
-    sequenceNumber: s.srNo,
-    status: 'IN_PROGRESS',
-    currentStatus: 'In Progress',
-    project: 'Standard CMM Series',
-    customer: 'Accurate Gauging Plant',
-    currentDepartment: s.dept,
-    responsibleDepartment: s.dept,
-    nextDepartment: s.nextDept,
-    previousDepartment: '',
-    progress: 10,
-    overallProgress: 10,
-    overallProgressPercent: 10,
-    departmentProgress: 10,
-    plannedStartDate: '2026-10-01',
-    targetDate: '2026-10-31',
-    plannedDueDate: '2026-10-31',
-    processRoute: STANDARD_ROUTE_ORDER,
-    remarks: s.isNpi ? 'NPI machine with priority allocation' : 'Planned for October 2026',
-    isNpi: s.isNpi || false,
-    createdAt: now,
-    updatedAt: now,
-  }));
+  // Return empty array: Master catalog and planning start from zero per user request
+  return [];
 }
 
 export function generateSeedMonthlyPlans(): MonthlyPlan[] {
-  const now = new Date().toISOString();
-  return SEED_OCTOBER_2026_MACHINES.map((s) => ({
-    id: `PLAN-2026-10-${s.machineNumber}`,
-    srNo: s.srNo,
-    machineNumber: s.machineNumber,
-    machineModel: s.model,
-    machineSize: s.size,
-    quantity: 1,
-    plannedQuantity: 1,
-    priority: s.priority,
-    month: 'October',
-    year: '2026',
-    department: '02 Planning',
-    status: 'RELEASED',
-    planStatus: 'Active',
-    remarks: s.isNpi ? 'NPI October Plan' : 'Standard October 2026 Plan',
-    createdAt: now,
-    updatedAt: now,
-  }));
+  // Empty to ensure clean fresh entry and never resurrect deleted monthly plans
+  return [];
 }
 
 export function generateSeedDepartmentWork(): DepartmentWork[] {
-  const now = new Date().toISOString();
-  return SEED_OCTOBER_2026_MACHINES.map((s) => {
-    const pNum = parseInt(s.priority.replace(/\D/g, '') || '10', 10);
-    const workPriority: 'Low' | 'Medium' | 'High' | 'Critical' =
-      pNum <= 5 ? 'Critical' : pNum <= 15 ? 'High' : 'Medium';
+  // Empty to ensure clean fresh entry and never resurrect deleted department tasks
+  return [];
+}
 
-    return {
-      id: `DW-02-PLANNING-${s.machineNumber}`,
-      title: `[PLANNING] Material & Production Release - CMM #${s.machineNumber}`,
-      department: '02 Planning',
-      machineNumber: s.machineNumber,
-      machineModel: s.model,
-      machineSize: s.size,
-      operationWork: 'Master Planning, BOM Validation & Production Release',
-      category: 'Planning',
-      plannedQuantity: 1,
-      actualQuantity: 1,
-      status: 'In Progress' as const,
-      priority: workPriority,
-      assignedTo: 'Planning Lead',
-      assignedDate: '2026-10-01',
-      targetDate: '2026-10-15',
-      dueDate: '2026-10-15',
-      remarks: `October 2026 production batch #${s.srNo}`,
-      progress: 25,
-      month: 'October',
-      year: '2026',
-      planMonth: 'October',
-      planYear: '2026',
-      createdAt: now,
-      updatedAt: now,
-      isResponsible: true,
-    };
+export function generateSeedUsers(): UserProfile[] {
+  const now = new Date().toISOString();
+  const admin: UserProfile = {
+    id: 'administrator',
+    userId: 'administrator',
+    username: MASTER_ADMIN_USERNAME,
+    employeeName: 'System Administrator',
+    displayName: 'System Administrator',
+    authorityName: 'System Administrator',
+    processNo: 'ADMIN',
+    mustChangePassword: false,
+    employeeCode: 'ADMIN-01',
+    email: 'admin@accurate.in',
+    departmentId: 'ALL',
+    department: 'All Departments (Master View)',
+    role: 'ADMIN',
+    status: 'Active',
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: 'SYSTEM_BOOTSTRAP',
+  };
+
+  const depts: UserProfile[] = STANDARD_DEPARTMENT_ACCOUNTS.map((ac) => ({
+    id: ac.username.toLowerCase(),
+    userId: ac.username.toLowerCase(),
+    username: ac.username,
+    employeeName: ac.authorityName,
+    displayName: ac.authorityName,
+    authorityName: ac.authorityName,
+    processNo: ac.processNo,
+    mustChangePassword: false,
+    employeeCode: `ACC-${ac.processNo}`,
+    email: `${ac.username.toLowerCase()}@accurate.in`,
+    departmentId: ac.departmentId,
+    department: ac.department,
+    role: ac.role,
+    status: 'Active',
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: 'SYSTEM_BOOTSTRAP',
+  }));
+
+  return [admin, ...depts];
+}
+
+export function purgeAllOldPlanningAndShopFloorStorage(): void {
+  const keysToPurge = [
+    'ams_db_machines',
+    'ams_db_monthly_plans',
+    'ams_db_monthlyPlans',
+    'ams_db_backlog_items',
+    'ams_db_backlogItems',
+    'ams_db_department_work',
+    'ams_db_departmentWork',
+    'ams_db_weekly_plans',
+    'ams_db_weeklyPlans',
+    'ams_db_yearly_plans',
+    'ams_db_yearlyPlans',
+    'ams_db_department_handovers',
+    'ams_db_departmentHandovers',
+    'ams_db_handovers',
+    'ams_db_quality_rejections',
+    'ams_db_qualityRejections',
+    'ams_db_quality_daily_checks',
+    'ams_db_qualityChecks',
+    'ams_db_quality_operations',
+    'ams_db_operations',
+    'ams_db_operation_lots',
+    'ams_db_operationLots',
+    'ams_db_daily_operation_updates',
+    'ams_db_roadmap_items',
+    'ams_db_roadmapItems',
+    'ams_db_notifications',
+    'ams_db_import_history',
+    'ams_db_machine_documents',
+    'ams_db_machineDocs',
+    'ams_db_accessoriesOrders',
+  ];
+
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      keysToPurge.forEach((k) => {
+        window.localStorage.removeItem(k);
+        window.localStorage.setItem(k, '[]');
+      });
+    }
+  } catch (err) {
+    console.warn('Notice purging local storage:', err);
+  }
+
+  // Clear in-memory collections and broadcast empty arrays to active listeners
+  const collectionsToClear = [
+    'machines',
+    'monthly_plans',
+    'monthlyPlans',
+    'backlog_items',
+    'backlogItems',
+    'department_work',
+    'departmentWork',
+    'weekly_plans',
+    'weeklyPlans',
+    'yearly_plans',
+    'yearlyPlans',
+    'department_handovers',
+    'quality_rejections',
+    'quality_daily_checks',
+    'quality_operations',
+    'roadmap_items',
+    'operation_lots',
+    'notifications',
+    'import_history',
+    'machine_documents',
+    'accessoriesOrders',
+  ];
+
+  collectionsToClear.forEach((col) => {
+    inMemoryStore[col] = [];
+    if (listeners[col]) {
+      listeners[col].forEach((cb) => {
+        try {
+          cb([]);
+        } catch {}
+      });
+    }
   });
 }
+
+// Backwards-compatible alias
+export const purgeStaleMonthlyPlanAndBacklogStorage = purgeAllOldPlanningAndShopFloorStorage;
 
 export function getLocalCollection<T = any>(collectionName: string): T[] {
   const key = getStorageKey(collectionName);
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const stored = window.localStorage.getItem(key);
-      if (stored) {
+      if (stored !== null) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           inMemoryStore[collectionName] = parsed;
           return parsed;
         }
@@ -193,32 +245,18 @@ export function getLocalCollection<T = any>(collectionName: string): T[] {
   }
 
   // Fallback to memory
-  if (inMemoryStore[collectionName] && inMemoryStore[collectionName].length > 0) {
+  if (inMemoryStore[collectionName] !== undefined && Array.isArray(inMemoryStore[collectionName])) {
     return inMemoryStore[collectionName] as T[];
   }
 
-  // Default initial seeding
+  // Default initial seeding - ONLY preserve departments and users! All planning and shop-floor data starts at zero.
   let defaults: any[] = [];
   if (collectionName === 'departments') {
     defaults = INITIAL_DEPARTMENTS;
-  } else if (collectionName === 'machines') {
-    defaults = generateSeedMachines();
-  } else if (collectionName === 'monthly_plans') {
-    defaults = generateSeedMonthlyPlans();
-  } else if (collectionName === 'department_work') {
-    defaults = generateSeedDepartmentWork();
-  } else if (collectionName === 'quality_operations') {
-    defaults = [
-      { id: 'QOP-564-01', machineSize: '564', operationName: 'Granite Table Flatness Inspection', order: 1, standardLimit: '0.003 mm', active: true },
-      { id: 'QOP-564-02', machineSize: '564', operationName: 'Guideway Alignment & Squareness', order: 2, standardLimit: '0.002 mm', active: true },
-      { id: 'QOP-8156-01', machineSize: '8156', operationName: 'Granite Table Flatness Inspection', order: 1, standardLimit: '0.004 mm', active: true },
-      { id: 'QOP-8156-02', machineSize: '8156', operationName: 'Bridge Alignment & Dual Scale Sync', order: 2, standardLimit: '0.003 mm', active: true },
-      { id: 'QOP-ALL-FINAL', machineSize: 'ALL', operationName: 'Final Calibration & Verification (ISO 10360-2)', order: 99, standardLimit: 'E0,MPE <= 1.8 + L/350 um', active: true },
-    ];
-  } else if (collectionName === 'yearly_plans') {
-    defaults = [
-      { id: 'YP-2026', year: '2026', targetMachines: 300, totalTargetQuantity: 300, plannedTargetQuantity: 300, active: true, remarks: 'FY 2026 Master Production Plan' }
-    ];
+  } else if (collectionName === 'users') {
+    defaults = generateSeedUsers();
+  } else {
+    defaults = [];
   }
 
   inMemoryStore[collectionName] = defaults;

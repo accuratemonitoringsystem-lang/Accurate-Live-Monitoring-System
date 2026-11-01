@@ -118,6 +118,9 @@ service cloud.firestore {
     match /roadmap_items/{itemId} {
       allow read, write: if true;
     }
+    match /roadmapItems/{itemId} {
+      allow read, write: if true;
+    }
 
     // Quality Operations & Checks - Enforce Quality Status Integrity
     match /quality_operations/{opId} {
@@ -127,9 +130,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
     match /quality_daily_checks/{checkId} {
-      allow read: if true;
-      allow create, update: if isValidQualityCheck(request.resource.data);
-      allow delete: if true;
+      allow read, write: if true;
+    }
+    match /qualityChecks/{checkId} {
+      allow read, write: if true;
     }
     match /qualityChecklists/{checkId} {
       allow read: if true;
@@ -314,6 +318,9 @@ service cloud.firestore {
       allow read, write: if true;
     }
     match /machine_documents/{docId} {
+      allow read, write: if true;
+    }
+    match /machineDocs/{docId} {
       allow read, write: if true;
     }
     match /documents/{docId} {

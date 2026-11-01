@@ -33,6 +33,7 @@ import {
   Clock,
   TrendingUp,
   Layers,
+  Trash2,
 } from 'lucide-react';
 import { BacklogManagementView } from '../components/backlog/BacklogManagementView';
 import { ProductionAnalyticsView } from '../components/ProductionAnalyticsView';
@@ -44,6 +45,7 @@ import { PlanExcelImportView } from '../components/planning/PlanExcelImportView'
 import { AdminPlanExcelImportModal } from '../components/planning/AdminPlanExcelImportModal';
 import {
   AuditLogEntry,
+  BacklogItem,
   Department,
   DepartmentHandover,
   DepartmentWork,
@@ -80,6 +82,7 @@ import { DepartmentOperationLotsView } from '../components/operations/Department
 import { DepartmentDailyUpdatesView } from '../components/operations/DepartmentDailyUpdatesView';
 import { generateMisPresentation } from '../utils/ppt';
 import { ExcelImportType } from '../utils/excel';
+import { isDepartmentMatch } from '../utils/departmentUtils';
 
 interface AdminDashboardViewProps {
   departments: Department[];
@@ -87,6 +90,7 @@ interface AdminDashboardViewProps {
   yearlyPlans: YearlyPlan[];
   monthlyPlans: MonthlyPlan[];
   weeklyPlans: WeeklyPlan[];
+  backlogItems?: BacklogItem[];
   qualityOps: QualityOperation[];
   qualityChecks: QualityDailyCheck[];
   qualityRejections: QualityRejection[];
@@ -110,6 +114,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   yearlyPlans,
   monthlyPlans,
   weeklyPlans,
+  backlogItems = [],
   qualityOps,
   qualityChecks,
   qualityRejections,
@@ -180,6 +185,11 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     if (selectedDepartment === 'All Departments') return weeklyPlans;
     return weeklyPlans.filter((p) => p.department === selectedDepartment);
   }, [weeklyPlans, selectedDepartment]);
+
+  const filteredBacklogItems = useMemo(() => {
+    if (selectedDepartment === 'All Departments') return backlogItems;
+    return backlogItems.filter((b) => isDepartmentMatch(b.department, selectedDepartment));
+  }, [backlogItems, selectedDepartment]);
 
   const filteredYearlyPlans = useMemo(() => {
     if (selectedDepartment === 'All Departments') return yearlyPlans;
@@ -254,7 +264,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'mis', label: 'MIS', icon: FileSpreadsheet },
     { id: 'excel_import', label: 'Excel Import', icon: FileSpreadsheet },
-    { id: 'data_management', label: 'Data Management', icon: Database },
+    { id: 'data_management', label: 'Database Management', icon: Database },
+    { id: 'clear_monthly_backlog', label: 'Clear Monthly & Backlog', icon: Trash2 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'department_management', label: 'Department Management', icon: Building },
     { id: 'audit_logs', label: 'Audit Logs', icon: FileText },
@@ -485,6 +496,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               machines={filteredMachines}
               monthlyPlans={filteredMonthlyPlans}
               weeklyPlans={filteredWeeklyPlans}
+              backlogItems={filteredBacklogItems}
               departmentWork={filteredDepartmentWork}
               qualityChecks={filteredQualityChecks}
               qualityRejections={filteredQualityRejections}
@@ -845,8 +857,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
 
-          {/* TAB: DATA MANAGEMENT */}
-          {activeAdminTab === 'data_management' && (
+          {/* TAB: DATA MANAGEMENT & CLEAR MONTHLY/BACKLOG */}
+          {(activeAdminTab === 'data_management' || activeAdminTab === 'clear_monthly_backlog') && (
             <DataManagementView
               departments={departments}
               machines={machines}
@@ -863,6 +875,8 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               machineDocs={machineDocs}
               userProfiles={userProfiles}
               onOpenExcelImport={() => onOpenExcelImport('planning')}
+              onNavigateTab={(tab) => setActiveAdminTab(tab)}
+              initialSubTab={activeAdminTab === 'clear_monthly_backlog' ? 'clear_plan_backlog' : undefined}
             />
           )}
 

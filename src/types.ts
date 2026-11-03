@@ -306,24 +306,35 @@ export interface YearlyPlan {
 
 export interface MonthlyPlan {
   id: string;
+  planId?: string;
+  financialYear?: string;
+  calendarYear?: string;
   month: string;
   year: string;
+  departmentGroup?: 'GROUP_1' | 'GROUP_2' | string;
+  departmentCode?: string;
+  departmentId?: string;
+  departmentName?: string;
   department: string;
-  machineModel?: string;
   machineNumber?: string;
   machineSize?: string;
-  model?: string;
-  specification?: string;
-  size?: string;
-  cmmSize?: string;
-  cmmModel?: string;
+  priority?: 'High' | 'Medium' | 'Low' | 'Urgent' | string;
+  quantity?: number;
+  plannedQuantity: number;
+  status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold' | string;
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  importBatchId?: string;
+  batchId?: string;
   sequenceNumber?: number;
   priorityNumber?: number;
   sequenceOrder?: number;
   planOrder?: number;
   planTitle?: string;
-  importBatchId?: string;
-  batchId?: string;
+  responsibleEmployee?: string;
   project?: string;
   projectName?: string;
   customer?: string;
@@ -332,23 +343,20 @@ export interface MonthlyPlan {
   process?: string;
   task?: string;
   category?: string;
-  plannedQuantity: number;
   plannedTime?: string;
   targetAmount?: number;
   actualQuantity?: number;
   actualAmount?: number;
   remainingQuantity?: number;
   achievementPercent?: number;
-  responsibleEmployee?: string;
-  priority?: 'Low' | 'Medium' | 'High' | 'Critical' | string;
   plannedStartDate?: string;
   plannedEndDate?: string;
-  remarks?: string;
-  status?: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  updatedBy?: string;
+  machineModel?: string;
+  model?: string;
+  specification?: string;
+  size?: string;
+  cmmSize?: string;
+  cmmModel?: string;
 }
 
 export interface WeeklyPlan {
@@ -1617,7 +1625,52 @@ export interface MachineComplianceSummary {
   lastUpdatedBy?: string;
 }
 
-export type BacklogStatus = 'Open' | 'In Progress' | 'Partially Completed' | 'Completed' | 'Blocked';
+export type BacklogStatus =
+  | 'Open'
+  | 'In Progress'
+  | 'Partially Completed'
+  | 'On Hold'
+  | 'Completed'
+  | 'Blocked'
+  | 'Overdue'
+  | 'Transferred'
+  | 'Handed Over';
+
+export interface BacklogHandoverRecord {
+  id: string;
+  backlogItemId: string;
+  machineNumber: string;
+  machineSize: string;
+  remainingOperation: string;
+  sendingDepartment: string;
+  receivingDepartment: string;
+  handoverQuantity: number;
+  handoverDate: string;
+  remarks?: string;
+  status: 'Handover Initiated' | 'Awaiting Acceptance' | 'Accepted' | 'Rejected' | 'In Progress' | 'Completed';
+  initiatedBy?: string;
+  respondedBy?: string;
+  responseDate?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BacklogUpdateRecord {
+  id: string;
+  timestamp: string;
+  user: string;
+  previousStatus?: string;
+  newStatus?: string;
+  completedQuantity?: number;
+  pendingQuantity?: number;
+  progressPercent?: number;
+  delayReason?: string;
+  remarks?: string;
+  responsiblePerson?: string;
+  expectedCompletionDate?: string;
+  actualCompletionDate?: string;
+}
 
 export interface BacklogItem {
   id: string;
@@ -1625,6 +1678,11 @@ export interface BacklogItem {
   month: string;
   year: string | number;
   department: string;
+  departmentCode?: string;
+  originalDepartment?: string;
+  currentDepartment?: string;
+  isUnmapped?: boolean;
+  unmappedReason?: string;
   machineNumber: string;
   machineSize: string;
   project?: string;
@@ -1634,6 +1692,12 @@ export interface BacklogItem {
   originalQuantity: number;
   completedQuantity: number;
   remainingQuantity: number;
+  pendingQuantity?: number;
+  progressPercent?: number;
+  delayReason?: string;
+  responsiblePerson?: string;
+  expectedCompletionDate?: string;
+  actualCompletionDate?: string;
   dueDate?: string;
   priority: 'Low' | 'Medium' | 'High' | 'Critical' | string;
   status: BacklogStatus;
@@ -1641,9 +1705,107 @@ export interface BacklogItem {
   batchId?: string;
   sourceFileName?: string;
   linkedMonthlyPlanId?: string;
+  handovers?: BacklogHandoverRecord[];
+  updateHistory?: BacklogUpdateRecord[];
   createdAt: string;
   updatedAt: string;
   lastUpdated?: string;
   createdBy?: string;
   updatedBy?: string;
 }
+
+// =========================================================================
+// PACKING & DISPATCH OPERATIONS MODULE TYPES
+// =========================================================================
+
+export type PackingOperationStage =
+  | 'Open Cable'
+  | 'Packed'
+  | 'Packed with Probing'
+  | 'Invoicing'
+  | 'Dispatched';
+
+export type PackingOperationStatus =
+  | 'Not Started'
+  | 'In Progress'
+  | 'Completed'
+  | 'On Hold';
+
+export interface PackingStageRecord {
+  stage: PackingOperationStage;
+  status: PackingOperationStatus;
+  progressPercent: number; // 0 to 100
+  startDate?: string;
+  completionDate?: string;
+  completedAt?: string;
+  assignedEmployee?: string;
+  remarks?: string;
+  pendingWork?: string;
+  documentUrl?: string;
+  documentName?: string;
+  // Invoicing specific fields:
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  invoiceAmount?: number;
+  invoiceStatus?: string;
+  invoiceRemarks?: string;
+  invoiceDocUrl?: string;
+  invoiceDocName?: string;
+  // Dispatch specific fields:
+  dispatchDate?: string;
+  deliveryReference?: string;
+  transporterName?: string;
+  lrNumber?: string;
+  ewayBillNumber?: string;
+  dispatchRemarks?: string;
+  dispatchDocUrl?: string;
+  dispatchDocName?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
+export interface PackingOperationHistoryEntry {
+  id: string;
+  machineId?: string;
+  machineNumber: string;
+  stage: PackingOperationStage;
+  action: 'RECEIVED' | 'PROGRESS_UPDATE' | 'STAGE_COMPLETED' | 'STAGE_STARTED' | 'DISPATCHED' | 'HANDOVER_ACCEPTED';
+  previousProgress: number;
+  newProgress: number;
+  assignedEmployee?: string;
+  remarks?: string;
+  pendingWork?: string;
+  invoiceNumber?: string;
+  dispatchReference?: string;
+  timestamp: string;
+  updatedBy: string;
+  userRole?: string;
+}
+
+export interface PackingMachineOperation {
+  id: string; // e.g. PKG-2465
+  machineId?: string;
+  machineNumber: string;
+  machineSize?: string;
+  model?: string;
+  project?: string;
+  customer?: string;
+  handoverId?: string;
+  previousDepartment: string;
+  receivedDate: string;
+  receivedTime?: string;
+  receivedBy?: string;
+  currentStage: PackingOperationStage;
+  currentProgressPercent: number; // 0 - 100
+  currentStageStatus: PackingOperationStatus;
+  stages: Record<PackingOperationStage, PackingStageRecord>;
+  isDispatched: boolean;
+  dispatchDate?: string;
+  history: PackingOperationHistoryEntry[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+

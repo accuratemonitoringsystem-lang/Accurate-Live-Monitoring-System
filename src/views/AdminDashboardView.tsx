@@ -34,7 +34,9 @@ import {
   TrendingUp,
   Layers,
   Trash2,
+  Truck,
 } from 'lucide-react';
+import { PackingDispatchOperationsView } from '../components/packing/PackingDispatchOperationsView';
 import { BacklogManagementView } from '../components/backlog/BacklogManagementView';
 import { ProductionAnalyticsView } from '../components/ProductionAnalyticsView';
 import { DesignWorkManagementView } from '../components/DesignWorkManagementView';
@@ -80,6 +82,7 @@ import { QualityHandoverModule } from '../components/QualityHandoverModule';
 import { DepartmentNotificationCenter } from '../components/DepartmentNotificationCenter';
 import { DepartmentOperationLotsView } from '../components/operations/DepartmentOperationLotsView';
 import { DepartmentDailyUpdatesView } from '../components/operations/DepartmentDailyUpdatesView';
+import { AdminMonthlyPlanManagementView } from '../components/planning/AdminMonthlyPlanManagementView';
 import { generateMisPresentation } from '../utils/ppt';
 import { ExcelImportType } from '../utils/excel';
 import { isDepartmentMatch } from '../utils/departmentUtils';
@@ -188,7 +191,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
   const filteredBacklogItems = useMemo(() => {
     if (selectedDepartment === 'All Departments') return backlogItems;
-    return backlogItems.filter((b) => isDepartmentMatch(b.department, selectedDepartment));
+    return backlogItems.filter(
+      (b) =>
+        isDepartmentMatch(b.currentDepartment || b.department, selectedDepartment) ||
+        isDepartmentMatch(b.department, selectedDepartment) ||
+        (b.departmentCode ? isDepartmentMatch(b.departmentCode, selectedDepartment) : false)
+    );
   }, [backlogItems, selectedDepartment]);
 
   const filteredYearlyPlans = useMemo(() => {
@@ -259,6 +267,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     { id: 'quality', label: 'Quality', icon: CheckSquare },
     { id: 'quality_handover', label: 'Quality Handover Hub', icon: ShieldCheck },
     { id: 'handover', label: 'Handover', icon: ArrowRightLeft },
+    { id: 'packing_operations', label: 'Packing & Dispatch Operations', icon: Truck },
     { id: 'documents', label: 'Documents', icon: FileText },
     { id: 'notifications', label: 'Notifications', icon: Bell, badge: notifications.filter(n => !n.read).length },
     { id: 'reports', label: 'Reports', icon: FileText },
@@ -642,10 +651,18 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
 
-          {/* TAB: PLANNING / YEARLY / MONTHLY / WEEKLY / PLAN VS ACTUAL */}
+          {/* TAB: MONTHLY PLAN MANAGEMENT MODULE (Dedicated 4-Column Group 1 & 2 System) */}
+          {activeAdminTab === 'monthly_plans' && (
+            <AdminMonthlyPlanManagementView
+              monthlyPlans={monthlyPlans}
+              departments={departments}
+              onOpenQuickUpdate={onOpenQuickUpdate}
+            />
+          )}
+
+          {/* TAB: PLANNING / YEARLY / WEEKLY / PLAN VS ACTUAL */}
           {(activeAdminTab === 'planning' ||
             activeAdminTab === 'yearly_plans' ||
-            activeAdminTab === 'monthly_plans' ||
             activeAdminTab === 'weekly_plans' ||
             activeAdminTab === 'plan_vs_actual') && (
             <PlanningView
@@ -656,9 +673,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               machines={filteredMachines}
               selectedDepartment={selectedDepartment}
               initialTab={
-                activeAdminTab === 'monthly_plans'
-                  ? 'monthly'
-                  : activeAdminTab === 'weekly_plans'
+                activeAdminTab === 'weekly_plans'
                   ? 'weekly'
                   : activeAdminTab === 'yearly_plans'
                   ? 'yearly'
@@ -772,6 +787,17 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               departmentName={selectedDepartment === 'All Departments' ? undefined : selectedDepartment}
               machines={machines}
               onOpenDailyUpdate={() => setActiveAdminTab('daily_updates')}
+            />
+          )}
+
+          {/* TAB: PACKING & DISPATCH OPERATIONS MODULE */}
+          {activeAdminTab === 'packing_operations' && (
+            <PackingDispatchOperationsView
+              userProfile={userProfile}
+              departmentName="15 Packing & Dispatch"
+              isAdmin={true}
+              machines={machines}
+              handovers={handovers}
             />
           )}
 

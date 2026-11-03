@@ -36,7 +36,10 @@ import {
   AlertCircle,
   Target,
   Boxes,
+  Truck,
+  ArrowRight,
 } from 'lucide-react';
+import { PackingDispatchOperationsView } from '../components/packing/PackingDispatchOperationsView';
 import { ProductionAnalyticsView } from '../components/ProductionAnalyticsView';
 import { DesignWorkManagementView } from '../components/DesignWorkManagementView';
 import { DepartmentDesignRequestsView } from '../components/DepartmentDesignRequestsView';
@@ -79,6 +82,7 @@ import { DepartmentOperationMasterView } from '../components/operations/Departme
 import { DepartmentOperationLotsView } from '../components/operations/DepartmentOperationLotsView';
 import { DepartmentDailyUpdatesView } from '../components/operations/DepartmentDailyUpdatesView';
 import { BacklogManagementView } from '../components/backlog/BacklogManagementView';
+import { DepartmentMonthlyPlanSection } from '../components/planning/DepartmentMonthlyPlanSection';
 import { isDepartmentMatch, getNextDepartmentInRoute } from '../utils/departmentUtils';
 import { generateMisPresentation } from '../utils/ppt';
 import { ExcelImportType } from '../utils/excel';
@@ -152,8 +156,17 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
     departmentName.startsWith('01-A') ||
     departmentName.startsWith('01-B');
 
-  // Active Tab & Filters (Standard Dashboard overview as unified landing tab)
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const isPackingDept =
+    departmentName.includes('Packing') ||
+    departmentName.includes('Dispatch') ||
+    departmentName.startsWith('15');
+
+  // Active Tab & Filters (Standard Dashboard overview as unified landing tab, Packing & Dispatch Operations for Dept 15)
+  const [activeTab, setActiveTab] = useState<string>(() => (
+    departmentName.includes('Packing') || departmentName.includes('Dispatch') || departmentName.startsWith('15')
+      ? 'packing_operations'
+      : 'dashboard'
+  ));
   const [selectedMonth, setSelectedMonth] = useState<string>('October 2026');
   const [selectedMachineSize, setSelectedMachineSize] = useState<string>('All Sizes');
   const [shopFloorKpiFilter, setShopFloorKpiFilter] = useState<string | null>(null);
@@ -164,21 +177,31 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
   // Scoped Data: Strictly filtered to this department using canonical matching
   const scopedWork = departmentWork.filter((w) => isDepartmentMatch(w.department, departmentName));
   // Central manufacturing plan is visible to all departments except Design (Requirement 2)
-  const scopedMonthly = isDesignDept
-    ? []
-    : monthlyPlans.filter((p) => {
-        if (isDepartmentMatch(p.department, '02 Planning') || !p.department) return true;
-        return isDepartmentMatch(p.department, departmentName);
-      });
-  const scopedWeekly = isDesignDept
-    ? []
-    : weeklyPlans.filter((p) => {
-        if (isDepartmentMatch(p.department, '02 Planning') || !p.department) return true;
-        return isDepartmentMatch(p.department, departmentName);
-      });
-  const scopedBacklog = isDesignDept
-    ? []
-    : backlogItems.filter((b) => isDepartmentMatch(b.department, departmentName));
+  const scopedMonthly = useMemo(() => {
+    if (isDesignDept) return [];
+    return monthlyPlans.filter((p) => {
+      if (p.departmentCode && isDepartmentMatch(p.departmentCode, departmentName)) return true;
+      return isDepartmentMatch(p.department, departmentName);
+    });
+  }, [monthlyPlans, departmentName, isDesignDept]);
+
+  const scopedWeekly = useMemo(() => {
+    if (isDesignDept) return [];
+    return weeklyPlans.filter((p) => {
+      return isDepartmentMatch(p.department, departmentName);
+    });
+  }, [weeklyPlans, departmentName, isDesignDept]);
+  const scopedBacklog = useMemo(() => {
+    return backlogItems.filter((b) => {
+      if (b.isUnmapped) return false;
+      return (
+        isDepartmentMatch(b.currentDepartment, departmentName) ||
+        isDepartmentMatch(b.department, departmentName) ||
+        isDepartmentMatch(b.departmentCode, departmentName)
+      );
+    });
+  }, [backlogItems, departmentName]);
+
   const scopedHandovers = handovers.filter(
     (h) =>
       isDepartmentMatch(h.sendingDepartment, departmentName) ||
@@ -354,6 +377,8 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
     (w) => w.status === 'Quality Hold' || w.status === 'QUALITY_HOLD' || w.status === 'On Hold'
   ).length;
   const rejectedKpi = scopedRejections.filter((r) => r.status !== 'Closed').length;
+  const backlogKpi = scopedBacklog.length;
+  const backlogPendingQtyKpi = scopedBacklog.reduce((acc, b) => acc + (b.pendingQuantity ?? b.remainingQuantity ?? b.originalQuantity ?? 1), 0);
 
   // Legacy variables maintained
   const totalTasks = totalAssignedKpi;
@@ -385,9 +410,10 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
     displayNavItems = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'daily_updates', label: 'Daily Operation Updates', icon: Clock },
-      { id: 'planned_machines', label: 'Monthly Plan / Upcoming Machines', icon: Layers, badge: monthlyPlans.length + weeklyPlans.length, badgeColor: 'bg-indigo-600' },
-      { id: 'monthly_plan', label: 'Monthly Plan', icon: Calendar, badge: monthlyPlans.length, badgeColor: 'bg-blue-600' },
+      { id: 'planned_machines', label: 'Monthly Plan / Upcoming Machines', icon: Layers, badge: scopedMonthly.length + scopedWeekly.length, badgeColor: 'bg-indigo-600' },
+      { id: 'monthly_plan', label: 'Monthly Plan', icon: Calendar, badge: scopedMonthly.length, badgeColor: 'bg-blue-600' },
       { id: 'weekly_plan', label: 'Weekly Plan', icon: Clock },
+      { id: 'backlog', label: 'Backlog Management', icon: Layers, badge: scopedBacklog.length, badgeColor: 'bg-amber-600' },
       { id: 'outgoing_handovers', label: 'Planning Handover / Release', icon: ArrowRightLeft },
       { id: 'incoming_handovers', label: 'Incoming Machines', icon: ArrowRightLeft, badge: pendingIncomingCount, badgeColor: 'bg-amber-600' },
       { id: 'my_work', label: 'Active Work', icon: Building, badge: scopedWork.filter(w => w.status !== 'Completed').length },
@@ -410,6 +436,7 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
     displayNavItems = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'design_management', label: 'Design Work Management', icon: PenTool },
+      { id: 'backlog', label: 'Backlog Management', icon: Layers, badge: scopedBacklog.length, badgeColor: 'bg-amber-600' },
       { id: 'operation_lots', label: 'Operation Lots', icon: Boxes },
       { id: 'operation_master', label: 'Operation Master', icon: Sliders },
       { id: 'shop_floor', label: 'Shop Floor & Machines', icon: Cpu, badge: scopedDeptMachines.length, badgeColor: 'bg-blue-600' },
@@ -460,6 +487,15 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
         { id: 'quality_ops', label: 'Quality Operations', icon: CheckSquare },
         { id: 'today_inspection', label: "Today's Inspection", icon: CheckSquare }
       );
+    }
+
+    if (isPackingDept) {
+      displayNavItems.splice(1, 0, {
+        id: 'packing_operations',
+        label: 'Packing & Dispatch Operations',
+        icon: Truck,
+        badgeColor: 'bg-indigo-600',
+      });
     }
 
     displayNavItems.splice(displayNavItems.findIndex(i => i.id === 'quality_handover'), 0, {
@@ -778,6 +814,35 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
                 </div>
               </div>
 
+              {/* PACKING & DISPATCH OPERATIONS DIRECT BANNER FOR DEPT 15 */}
+              {isPackingDept && (
+                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md border border-indigo-700/50">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-3 bg-indigo-500/20 rounded-xl border border-indigo-400/30 text-indigo-300 shrink-0">
+                      <Truck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/30 text-indigo-200 text-[10px] font-black uppercase tracking-wider">
+                          Dedicated Module
+                        </span>
+                        <h4 className="font-black text-sm text-white">Packing &amp; Dispatch Operations</h4>
+                      </div>
+                      <p className="text-xs text-indigo-200 mt-1 max-w-xl">
+                        Track live sequential stages with 100% completion rule: Open Cable &bull; Packed &bull; Packed with Probing &bull; Invoicing &bull; Dispatched.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('packing_operations')}
+                    className="w-full sm:w-auto px-4 py-2.5 bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-black text-xs rounded-xl transition shadow-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                  >
+                    <span>Open Operations Module</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* 4-STATE MACHINE WORKFLOW ARCHITECTURE (Section 2 & Section 6) */}
               {!isDesignDept && (
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs">
@@ -901,8 +966,8 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
                 </div>
               )}
 
-              {/* Section 19: The 9 Live Department KPI Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-9 gap-3 sm:gap-3.5">
+              {/* Section 19: The 10 Live Department KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10 gap-3 sm:gap-3.5">
                 {/* 1. TOTAL ASSIGNED */}
                 <button
                   type="button"
@@ -1109,6 +1174,28 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
                     <span className="opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
                   </div>
                 </button>
+
+                {/* 10. BACKLOG ITEMS */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('backlog');
+                  }}
+                  className="bg-white hover:bg-amber-50/40 transition-all rounded-2xl p-4 border border-slate-200 hover:border-amber-400 shadow-xs text-left group cursor-pointer"
+                  title="Click to view department backlog items and manage handovers"
+                >
+                  <div className="flex items-center justify-between text-amber-600 transition-colors">
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Backlog</span>
+                    <Layers className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-amber-600 mt-1 font-mono">
+                    {backlogKpi}
+                  </div>
+                  <div className="text-[10px] text-amber-700/80 mt-0.5 font-medium flex items-center justify-between">
+                    <span>{backlogPendingQtyKpi} pending qty</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                  </div>
+                </button>
               </div>
 
               {/* Shop Floor Real Machines Status Banner */}
@@ -1266,6 +1353,17 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
             </div>
           )}
 
+          {/* TAB: PACKING & DISPATCH OPERATIONS MODULE */}
+          {activeTab === 'packing_operations' && (
+            <PackingDispatchOperationsView
+              userProfile={userProfile}
+              departmentName={departmentName}
+              isAdmin={isAdmin}
+              machines={machines}
+              handovers={handovers}
+            />
+          )}
+
           {/* TAB: PRODUCTION ANALYTICS (Department-Scoped View - Locked to Current Department) */}
           {activeTab === 'production_analytics' && (
             <ProductionAnalyticsView
@@ -1367,9 +1465,22 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
             />
           )}
 
-          {/* TAB: WEEKLY / MONTHLY PLAN / YEARLY PLAN / PLAN VS ACTUAL */}
+          {/* TAB: DEDICATED 4-COLUMN DEPARTMENT MONTHLY PLAN */}
+          {activeTab === 'monthly_plan' && (
+            <DepartmentMonthlyPlanSection
+              departmentName={departmentName}
+              monthlyPlans={monthlyPlans}
+              selectedMonth={selectedMonth}
+              onOpenQuickUpdate={onOpenQuickUpdate}
+              onSelectMachineNumber={(mNo) => {
+                const found = machines.find((m) => m.machineNumber === mNo);
+                if (found) setSelectedMachine(found);
+              }}
+            />
+          )}
+
+          {/* TAB: WEEKLY / YEARLY PLAN / PLAN VS ACTUAL */}
           {(activeTab === 'weekly_plan' ||
-            activeTab === 'monthly_plan' ||
             activeTab === 'yearly_plan' ||
             activeTab === 'plan_vs_actual') && (
             <PlanningView
@@ -1383,9 +1494,7 @@ export const DepartmentDashboardView: React.FC<DepartmentDashboardViewProps> = (
                   ? 'weekly'
                   : activeTab === 'yearly_plan'
                   ? 'yearly'
-                  : activeTab === 'plan_vs_actual'
-                  ? 'plan_vs_actual'
-                  : 'monthly'
+                  : 'plan_vs_actual'
               }
               onOpenExcelImport={() => onOpenExcelImport('planning')}
             />

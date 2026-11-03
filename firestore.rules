@@ -482,6 +482,21 @@ service cloud.firestore {
     match /backlogItems/{itemId} {
       allow read, write: if true;
     }
+
+    // Packing & Dispatch Operations Collections
+    match /packing_operations/{opId} {
+      allow read, write: if true;
+    }
+    match /packingOperations/{opId} {
+      allow read, write: if true;
+    }
+    match /packing_operation_history/{histId} {
+      allow read, write: if true;
+    }
+    match /packingOperationHistory/{histId} {
+      allow read, write: if true;
+    }
   }
 }
+
 

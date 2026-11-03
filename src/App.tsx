@@ -49,17 +49,11 @@ import { reconcileMonthlyPlanAssignments } from './services/reconciliationServic
 import { areMachineNumbersEqual, normalizeMachineNumber } from './utils/machineUtils';
 import { isDepartmentMatch } from './utils/departmentUtils';
 import { INITIAL_DEPARTMENTS } from './constants';
-import { purgeStaleMonthlyPlanAndBacklogStorage } from './utils/localFallbackStore';
 
 type NavigationMode = 'admin' | 'department';
 
 const AppContent: React.FC = () => {
   const { userProfile, loading, signOut } = useAuth();
-
-  // One-time client-side cache purge to ensure deleted monthly plans/backlogs never resurface
-  useEffect(() => {
-    purgeStaleMonthlyPlanAndBacklogStorage();
-  }, []);
 
   // Primary Navigation State
   const [navMode, setNavMode] = useState<NavigationMode>('department');

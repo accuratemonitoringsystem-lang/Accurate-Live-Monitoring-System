@@ -70,14 +70,14 @@ export function normalizeDepartmentKey(dept?: string): string {
   }
 
   // 4. Bridge Assembly vs Assembly
-  if (clean.includes('bridge') && clean.includes('assembly')) {
+  if (clean.includes('bridge') || clean === '12-a' || clean === '12a' || clean.includes('12-a') || clean.includes('12a')) {
     return '12 bridge assembly';
   }
   if (clean.includes('sub') && clean.includes('assembly')) {
     return '08 sub assembly';
   }
   if (
-    (clean.includes('12') || clean === 'assembly' || clean === 'main assembly') &&
+    (clean.includes('12') || clean === 'assembly' || clean === 'main assembly' || clean.includes('12-b') || clean.includes('12b')) &&
     !clean.includes('bridge') &&
     !clean.includes('sub')
   ) {
@@ -85,39 +85,106 @@ export function normalizeDepartmentKey(dept?: string): string {
   }
 
   // 5. Paint Shop
-  if (clean.includes('paint') && (clean.includes('class') || clean.includes('10-a'))) {
+  if (clean.includes('paint') && (clean.includes('class') || clean.includes('10-a') || clean.includes('10a') || clean.includes('pnt-a') || clean.includes('pnta'))) {
     return '10-a paint shop-a class item';
   }
-  if (clean.includes('paint') && (clean.includes('guard') || clean.includes('10-b'))) {
+  if (clean.includes('paint') && (clean.includes('guard') || clean.includes('10-b') || clean.includes('10b') || clean.includes('pnt-g') || clean.includes('pntg'))) {
     return '10-b paint shop-guard set';
   }
 
   // 6. Electronics
-  if (clean.includes('electron') && (clean.includes('cable') || clean.includes('11-a'))) {
+  if (clean.includes('electron') && (clean.includes('cable') || clean.includes('11-a') || clean.includes('11a') || clean.includes('elect-c') || clean.includes('electc'))) {
     return '11-a electronics-cable set';
   }
-  if (clean.includes('electron') && (clean.includes('tuning') || clean.includes('11-b'))) {
+  if (clean.includes('electron') && (clean.includes('tuning') || clean.includes('tunning') || clean.includes('11-b') || clean.includes('11b') || clean.includes('elect-t') || clean.includes('electt'))) {
     return '11-b electronics-tuning';
   }
 
   // 7. Shop Fabrication
-  if (clean.includes('metal') && clean.includes('shop')) {
+  if (clean.includes('metal') || clean === '06-a' || clean === '06a' || clean.includes('06-a metal')) {
     return '06-a metal shop';
   }
-  if (clean.includes('granite') && clean.includes('shop')) {
+  if (clean.includes('granite') || clean === '06-b' || clean === '06b' || clean.includes('granite semi finish') || clean.includes('granite shop')) {
     return '06-b granite shop';
   }
 
   // 8. Quality & Calibration
-  if (clean.includes('calibration') || clean.includes('14')) {
+  if (clean.includes('calibration') || clean === '14' || clean.includes('14 calibration')) {
     return '14 calibration';
   }
-  if (clean.includes('inward quality') || clean === '04' || clean.includes('04 inward')) {
+  if (clean.includes('inward quality') || clean === '04' || clean.includes('04 inward') || clean === 'qa' || clean === 'qc' || clean.includes('04 quality')) {
     return '04 inward quality';
+  }
+
+  // 9. Store & Purchase
+  if (clean === '03' || clean.includes('03 purchase') || clean.includes('purchase')) {
+    return '03 purchase';
+  }
+  if (clean === '05' || clean.includes('05 store') || clean.includes('store')) {
+    return '05 store';
+  }
+
+  // 10. Packing & Dispatch
+  if (clean === '15' || clean.includes('15 packing') || clean.includes('packing') || clean.includes('dispatch')) {
+    return '15 packing';
+  }
+
+  // 11. IT
+  if (clean === '16' || clean === '13' || clean.includes('16 it') || clean.includes('13 it') || clean.includes('computer inspection') || clean === 'it' || clean === 'accit') {
+    return '16 it';
+  }
+
+  // 12. Guard Fitment
+  if (clean === '09' || clean.includes('09 guard') || clean.includes('guard fitment')) {
+    return '09 guard fitment';
   }
 
   return clean;
 }
+
+export interface BacklogDepartmentMapping {
+  matched: boolean;
+  departmentCode: string;
+  departmentName: string;
+}
+
+/**
+ * Maps arbitrary raw department string or code to canonical system department.
+ * Used specifically for Backlog import and linkage to ensure zero unmapped false negatives.
+ */
+export function mapBacklogToDepartment(rawDept?: string, rawCode?: string): BacklogDepartmentMapping {
+  const input = `${rawCode || ''} ${rawDept || ''}`.trim();
+  if (!input) {
+    return { matched: false, departmentCode: 'UNMAPPED', departmentName: 'Unmapped Department' };
+  }
+
+  const norm = normalizeDepartmentKey(input);
+
+  if (norm === '01 design') return { matched: true, departmentCode: '01', departmentName: '01 Design' };
+  if (norm === '02 planning') return { matched: true, departmentCode: '02', departmentName: '02 Planning' };
+  if (norm === '03 purchase') return { matched: true, departmentCode: '03', departmentName: '03 Purchase' };
+  if (norm === '04 inward quality') return { matched: true, departmentCode: '04', departmentName: '04 Inward Quality' };
+  if (norm === '05 store') return { matched: true, departmentCode: '05', departmentName: '05 Store' };
+  if (norm === '06-a metal shop') return { matched: true, departmentCode: '06-A', departmentName: '06-A Metal Shop' };
+  if (norm === '06-b granite shop') return { matched: true, departmentCode: '06-B', departmentName: '06-B Granite Semi Finish' };
+  if (norm === '07a-lapping-flatness & insert fitment') return { matched: true, departmentCode: '07-A', departmentName: '07-A Lapping – Flatness & Insert Fitment' };
+  if (norm === '07b-lapping-y3 & slot') return { matched: true, departmentCode: '07-B', departmentName: '07-B Lapping – Y3 & Slot' };
+  if (norm === '07c-lapping-rtlt & top bottom') return { matched: true, departmentCode: '07-C', departmentName: '07-C Lapping – RTLT & Top Bottom' };
+  if (norm === '08 sub assembly') return { matched: true, departmentCode: '08', departmentName: '08 Sub Assembly' };
+  if (norm === '09 guard fitment') return { matched: true, departmentCode: '09', departmentName: '09 Guard Fitment' };
+  if (norm === '10-a paint shop-a class item') return { matched: true, departmentCode: '10-A', departmentName: '10-A Paint Shop – A Class' };
+  if (norm === '10-b paint shop-guard set') return { matched: true, departmentCode: '10-B', departmentName: '10-B Paint Shop – Guard' };
+  if (norm === '11-a electronics-cable set') return { matched: true, departmentCode: '11-A', departmentName: '11-A Electronics – Cable Set' };
+  if (norm === '11-b electronics-tuning') return { matched: true, departmentCode: '11-B', departmentName: '11-B Electronics – Tuning' };
+  if (norm === '12 bridge assembly') return { matched: true, departmentCode: '12-A', departmentName: '12-A Bridge Assembly' };
+  if (norm === '12 assembly') return { matched: true, departmentCode: '12-B', departmentName: '12-B Final Assembly' };
+  if (norm === '14 calibration') return { matched: true, departmentCode: '14', departmentName: '14 Calibration' };
+  if (norm === '15 packing') return { matched: true, departmentCode: '15', departmentName: '15 Packing & Dispatch' };
+  if (norm === '16 it') return { matched: true, departmentCode: '16', departmentName: '16 IT' };
+
+  return { matched: false, departmentCode: 'UNMAPPED', departmentName: rawDept || 'Unmapped Department' };
+}
+
 
 /**
  * Robust department matching utility that handles:

@@ -376,7 +376,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
         <div className="flex items-center space-x-2 shrink-0">
           <button
-            onClick={() => onSelectView('planning')}
+            onClick={() => onSelectView('monthly_plans')}
             className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
           >
             <span>+ Add Fresh Monthly Plan</span>
@@ -472,16 +472,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => onSelectView('planning')}
+              onClick={() => onSelectView('monthly_plans')}
               className="text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition flex items-center space-x-1"
             >
               <span>+ Add Monthly Plan</span>
             </button>
             <button
-              onClick={() => onSelectView('planning')}
+              onClick={() => onSelectView('monthly_plans')}
               className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
             >
-              <span>Open Planning Master &rarr;</span>
+              <span>Open Monthly Plan &rarr;</span>
             </button>
           </div>
         </div>

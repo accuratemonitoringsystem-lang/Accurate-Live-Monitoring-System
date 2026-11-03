@@ -31,6 +31,42 @@ export const PRODUCTION_DEPARTMENTS = INITIAL_DEPARTMENTS.filter(
   (d) => d.code !== '01' && !d.name.toLowerCase().includes('design')
 );
 
+export interface MonthlyPlanDeptDef {
+  code: string;
+  name: string;
+  label: string;
+  group: 'GROUP_1' | 'GROUP_2';
+  aliases: string[];
+}
+
+export const MONTHLY_PLAN_GROUP_1_DEPTS: MonthlyPlanDeptDef[] = [
+  { code: '02', name: '02 Planning', label: 'Planning', group: 'GROUP_1', aliases: ['02', 'planning', '02 planning'] },
+  { code: '03', name: '03 Purchase', label: 'Purchase', group: 'GROUP_1', aliases: ['03', 'purchase', '03 purchase'] },
+  { code: '04', name: '04 Inward Quality', label: 'Inward Quality', group: 'GROUP_1', aliases: ['04', 'inward quality', 'quality', '04 inward quality', 'qa'] },
+  { code: '05', name: '05 Store', label: 'Store', group: 'GROUP_1', aliases: ['05', 'store', '05 store'] },
+  { code: '06-A', name: '06-A Metal Shop', label: 'Metal Shop', group: 'GROUP_1', aliases: ['06-a', '06a', 'metal shop', '06-a metal shop', 'metal'] },
+  { code: '06-B', name: '06-B Granite Semi Finish', label: 'Granite Semi Finish', group: 'GROUP_1', aliases: ['06-b', '06b', 'granite semi finish', 'granite shop', '06-b granite shop', 'granite'] },
+  { code: '07-A', name: '07-A Lapping – Flatness & Insert Fitment', label: 'Lapping – Flatness & Insert Fitment', group: 'GROUP_1', aliases: ['07-a', '07a', '07a-lapping-flatness & insert fitment', 'lapping-flatness', 'flatness', 'insert fitment'] },
+  { code: '07-B', name: '07-B Lapping – Y3 & Slot', label: 'Lapping – Y3 & Slot', group: 'GROUP_1', aliases: ['07-b', '07b', '07b-lapping-y3 & slot', 'lapping-y3', 'y3', 'slot'] },
+  { code: '07-C', name: '07-C Lapping – RTLT & Top Bottom', label: 'Lapping – RTLT & Top Bottom', group: 'GROUP_1', aliases: ['07-c', '07c', '07c-lapping-rtlt & top bottom', 'lapping-rtlt', 'rtlt', 'top bottom'] },
+  { code: '08', name: '08 Sub Assembly', label: 'Sub Assembly', group: 'GROUP_1', aliases: ['08', 'sub assembly', '08 sub assembly', 'subassembly'] },
+  { code: '09', name: '09 Guard Fitment', label: 'Guard Fitment', group: 'GROUP_1', aliases: ['09', 'guard fitment', '09 guard fitment', 'guard'] },
+  { code: '10-A', name: '10-A Paint Shop – A Class', label: 'Paint Shop – A Class', group: 'GROUP_1', aliases: ['10-a', '10a', 'paint shop-a class item', 'paint shop - a class', 'paint-a', 'a class'] },
+  { code: '10-B', name: '10-B Paint Shop – Guard', label: 'Paint Shop – Guard', group: 'GROUP_1', aliases: ['10-b', '10b', 'paint shop-guard set', 'paint shop - guard', 'paint-g', 'guard set'] },
+  { code: '11-A', name: '11-A Electronics – Cable Set', label: 'Electronics – Cable Set', group: 'GROUP_1', aliases: ['11-a', '11a', 'electronics-cable set', 'electronics - cable set', 'cable set'] },
+];
+
+export const MONTHLY_PLAN_GROUP_2_DEPTS: MonthlyPlanDeptDef[] = [
+  { code: '11-B', name: '11-B Electronics – Tuning', label: 'Electronics – Tuning', group: 'GROUP_2', aliases: ['11-b', '11b', 'electronics-tuning', 'electronics - tuning', 'tuning'] },
+  { code: '12-A', name: '12-A Bridge Assembly', label: 'Bridge Assembly', group: 'GROUP_2', aliases: ['12-a', '12a', '12 bridge assembly', 'bridge assembly', 'bridge'] },
+  { code: '12-B', name: '12-B Final Assembly', label: 'Final Assembly', group: 'GROUP_2', aliases: ['12-b', '12b', '12 assembly', 'final assembly', 'assembly'] },
+  { code: '14', name: '14 Calibration', label: 'Calibration', group: 'GROUP_2', aliases: ['14', 'calibration', '14 calibration'] },
+  { code: '15', name: '15 Packing & Dispatch', label: 'Packing & Dispatch', group: 'GROUP_2', aliases: ['15', 'packing', '15 packing', 'dispatch', 'packing & dispatch'] },
+  { code: '16', name: '16 IT', label: 'IT', group: 'GROUP_2', aliases: ['16', '13', 'it', '16 it', '13 it-computer inspection', 'computer inspection'] },
+];
+
+export const ALL_MONTHLY_PLAN_DEPTS = [...MONTHLY_PLAN_GROUP_1_DEPTS, ...MONTHLY_PLAN_GROUP_2_DEPTS];
+
 export const DEFECT_CATEGORIES = [
   'Dimensional',
   'GD & T',

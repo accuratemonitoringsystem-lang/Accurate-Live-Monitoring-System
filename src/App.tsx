@@ -49,6 +49,7 @@ import { reconcileMonthlyPlanAssignments } from './services/reconciliationServic
 import { areMachineNumbersEqual, normalizeMachineNumber } from './utils/machineUtils';
 import { isDepartmentMatch } from './utils/departmentUtils';
 import { INITIAL_DEPARTMENTS } from './constants';
+import { purgeAllOldPlanningAndShopFloorStorage } from './utils/localFallbackStore';
 
 type NavigationMode = 'admin' | 'department';
 
@@ -104,6 +105,16 @@ const AppContent: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // One-time client purge on application boot to prevent resurrection of old cached data
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (localStorage.getItem('ams_force_backlog_purge_v3') !== 'true') {
+        purgeAllOldPlanningAndShopFloorStorage();
+        localStorage.setItem('ams_force_backlog_purge_v3', 'true');
+      }
+    }
   }, []);
 
   // Securely initialize subscriptions ONLY when user is authenticated

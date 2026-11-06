@@ -135,6 +135,9 @@ service cloud.firestore {
     match /qualityChecks/{checkId} {
       allow read, write: if true;
     }
+    match /quality_checks/{checkId} {
+      allow read, write: if true;
+    }
     match /qualityChecklists/{checkId} {
       allow read: if true;
       allow create, update: if isValidQualityCheck(request.resource.data);
@@ -480,6 +483,42 @@ service cloud.firestore {
       allow read, write: if true;
     }
     match /backlogItems/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlog/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlogs/{itemId} {
+      allow read, write: if true;
+    }
+    match /Backlog/{itemId} {
+      allow read, write: if true;
+    }
+    match /Backlogs/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlog_history/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlogHistory/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlog_handovers/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlogHandovers/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlog_updates/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlogUpdates/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlog_batches/{itemId} {
+      allow read, write: if true;
+    }
+    match /backlogBatches/{itemId} {
       allow read, write: if true;
     }
 

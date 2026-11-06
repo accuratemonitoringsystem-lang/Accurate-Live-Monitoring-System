@@ -687,8 +687,8 @@ export async function commitBacklogBatch(params: {
 }
 
 /**
- * In-memory / cache guard to ensure canonical 113 backlog items are populated
- * if the database was ever wiped or empty.
+ * In-memory / cache guard to retrieve backlog items from Firestore.
+ * Does NOT auto-seed obsolete data when empty (starts fresh from zero).
  */
 let seedingPromise: Promise<BacklogItem[]> | null = null;
 
@@ -720,40 +720,12 @@ export async function ensureBacklogItemsSeeded(): Promise<BacklogItem[]> {
         return items;
       }
 
-      // 2. Check local fallback storage
-      const local = getLocalCollection<BacklogItem>('backlog_items');
-      if (local && local.length > 0) {
-        // Sync local items to Firestore
-        for (const it of local) {
-          try {
-            await setDoc(doc(db, 'backlog_items', it.id), cleanData(it), { merge: true });
-          } catch {}
-        }
-        return local;
-      }
-
-      // 3. Otherwise seed canonical 113 backlog records from uploaded Excel batch BLB-2026-OCT-604663
-      const canonicalItems = generateCanonicalBacklogItems();
-      saveLocalCollection('backlog_items', canonicalItems);
-
-      // Async write to Firestore without blocking UI
-      (async () => {
-        for (const item of canonicalItems) {
-          try {
-            await setDoc(doc(db, 'backlog_items', item.id), cleanData(item), { merge: true });
-            await setDoc(doc(db, 'backlogItems', item.id), cleanData(item), { merge: true });
-          } catch (writeErr) {
-            console.warn('Notice seeding backlog item to Firestore:', writeErr);
-          }
-        }
-      })();
-
-      return canonicalItems;
+      // 2. If Firestore is empty, clear local store and return empty array
+      saveLocalCollection('backlog_items', [], true);
+      return [];
     } catch (err) {
-      console.warn('Notice checking backlog seeding, using local canonical:', err);
-      const fallback = generateCanonicalBacklogItems();
-      saveLocalCollection('backlog_items', fallback);
-      return fallback;
+      console.warn('Notice checking backlog seeding, returning empty:', err);
+      return [];
     }
   })();
 
@@ -789,21 +761,8 @@ export function subscribeBacklogItems(
     colRef,
     (snap) => {
       if (snap.empty) {
-        // Check if local cache has them
-        const local = getLocalCollection<BacklogItem>('backlog_items');
-        if (local && local.length > 0) {
-          let items = local;
-          if (departmentName && departmentName !== 'All Departments') {
-            items = items.filter(
-              (i) =>
-                !i.isUnmapped &&
-                (isDepartmentMatch(i.currentDepartment, departmentName) ||
-                  isDepartmentMatch(i.department, departmentName) ||
-                  isDepartmentMatch(i.departmentCode, departmentName))
-            );
-          }
-          callback(items);
-        }
+        saveLocalCollection('backlog_items', [], true);
+        callback([]);
         return;
       }
 
@@ -841,7 +800,7 @@ export function subscribeBacklogItems(
     (err) => {
       console.warn('Notice subscribing to backlog_items, falling back to local store:', err);
       const local = getLocalCollection<BacklogItem>('backlog_items');
-      let items = local.length > 0 ? local : generateCanonicalBacklogItems();
+      let items = local || [];
       if (departmentName && departmentName !== 'All Departments') {
         items = items.filter(
           (i) =>
